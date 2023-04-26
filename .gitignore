@@ -16,5 +16,6 @@ local.properties
 keystore.properties
 /todo.txt
 /release/
-/app/build/
-/mysynth/build/
+/app/build
+/mySynth/build
+/myAndroid/build
