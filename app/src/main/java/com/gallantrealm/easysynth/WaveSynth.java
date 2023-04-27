@@ -851,7 +851,7 @@ public class WaveSynth extends AbstractInstrument {
 	public static int RECORDING_BUFFER_SIZE = (MAX_SAMPLE_RATE * 2 * 60 * 5);
 	private short[] recordBuffer = new short[RECORDING_BUFFER_SIZE]; // 5 minutes of record time
 
-	private int[] echoTable = new int[MAX_SAMPLE_RATE]; // 1 sec of echo
+	private float[] echoTable = new float[MAX_SAMPLE_RATE]; // 1 sec of echo
 
 	private boolean keyDown1;
 	private boolean releaseKey1;
@@ -968,14 +968,10 @@ public class WaveSynth extends AbstractInstrument {
 	private int fp_freq2 = 0;
 	private int fp_freq3 = 0;
 	private int fp_freq4 = 0;
-	private int fp_amp1 = 0;
-	private int fp_amp2 = 0;
-	private int fp_amp3 = 0;
-	private int fp_amp4 = 0;
-	private int fp_smoothamp1 = 0;
-	private int fp_smoothamp2 = 0;
-	private int fp_smoothamp3 = 0;
-	private int fp_smoothamp4 = 0;
+	private float smoothamp1 = 0.0f;
+	private float smoothamp2 = 0.0f;
+	private float smoothamp3 = 0.0f;
+	private float smoothamp4 = 0.0f;
 	private int fp_filterAmp1 = 0;
 	private int fp_filterAmp2 = 0;
 	private int fp_filterAmp3 = 0;
@@ -998,7 +994,6 @@ public class WaveSynth extends AbstractInstrument {
 	private int fp_vibrato2Amp4 = 0;
 
 	private int fp_echoDelay = 0;
-	private int fp_echoAmount = 0;
 	private int echoIndex = 0;
 
 	private int fp_flangeRate = 0;
@@ -1120,29 +1115,29 @@ public class WaveSynth extends AbstractInstrument {
 			}
 
 			// amps
-			fp_smoothamp1 = (63 * fp_smoothamp1 + fp_amp1) >> 6;
-			fp_smoothamp2 = (63 * fp_smoothamp2 + fp_amp2) >> 6;
-			fp_smoothamp3 = (63 * fp_smoothamp3 + fp_amp3) >> 6;
-			fp_smoothamp4 = (63 * fp_smoothamp4 + fp_amp4) >> 6;
+			smoothamp1 = (63 * smoothamp1 + amp1) / 64;;
+			smoothamp2 = (63 * smoothamp2 + amp2) / 64;;
+			smoothamp3 = (63 * smoothamp3 + amp3) / 64;
+			smoothamp4 = (63 * smoothamp4 + amp4) /64;
 			if (vibratoDestination == VIBRATO_DESTINATION_AMP) {
 				int fp_vibrato1 = K32 - (((-vibratoTable[(vph1 >> 15) & WAVE_MASK] + K32) * fp_modVibratoAmp1) >> 16);
 				int fp_vibrato2 = K32 - (((-vibratoTable[(vph2 >> 15) & WAVE_MASK] + K32) * fp_modVibratoAmp2) >> 16);
 				int fp_vibrato3 = K32 - (((-vibratoTable[(vph3 >> 15) & WAVE_MASK] + K32) * fp_modVibratoAmp3) >> 16);
 				int fp_vibrato4 = K32 - (((-vibratoTable[(vph4 >> 15) & WAVE_MASK] + K32) * fp_modVibratoAmp4) >> 16);
-				fp_smoothamp1 = (fp_smoothamp1 * fp_vibrato1) >> 15;
-				fp_smoothamp2 = (fp_smoothamp2 * fp_vibrato2) >> 15;
-				fp_smoothamp3 = (fp_smoothamp3 * fp_vibrato3) >> 15;
-				fp_smoothamp4 = (fp_smoothamp4 * fp_vibrato4) >> 15;
+				smoothamp1 *= fp_vibrato1 / 32768.0f;
+				smoothamp2 *= fp_vibrato2 / 32768.0f;
+				smoothamp3 *= fp_vibrato3 / 32768.0f;
+				smoothamp4 *= fp_vibrato4 / 32768.0f;
 			}
 			if (vibrato2Destination == VIBRATO_DESTINATION_AMP) {
 				int fp_vibrato1 = K32 - (((-vibrato2Table[(v2ph1 >> 15) & WAVE_MASK] + K32) * fp_vibrato2Amp1) >> 16);
 				int fp_vibrato2 = K32 - (((-vibrato2Table[(v2ph2 >> 15) & WAVE_MASK] + K32) * fp_vibrato2Amp2) >> 16);
 				int fp_vibrato3 = K32 - (((-vibrato2Table[(v2ph3 >> 15) & WAVE_MASK] + K32) * fp_vibrato2Amp3) >> 16);
 				int fp_vibrato4 = K32 - (((-vibrato2Table[(v2ph4 >> 15) & WAVE_MASK] + K32) * fp_vibrato2Amp4) >> 16);
-				fp_smoothamp1 = (fp_smoothamp1 * fp_vibrato1) >> 15;
-				fp_smoothamp2 = (fp_smoothamp2 * fp_vibrato2) >> 15;
-				fp_smoothamp3 = (fp_smoothamp3 * fp_vibrato3) >> 15;
-				fp_smoothamp4 = (fp_smoothamp4 * fp_vibrato4) >> 15;
+				smoothamp1 *= fp_vibrato1 / 32768.0f;
+				smoothamp2 *= fp_vibrato2 / 32768.0f;
+				smoothamp3 *= fp_vibrato3 / 32768.0f;
+				smoothamp4 *= fp_vibrato4 / 32768.0f;
 			}
 
 			// filter amps
@@ -1179,112 +1174,46 @@ public class WaveSynth extends AbstractInstrument {
 				fp_smoothFilterAmp4 = ((fp_smoothFilterAmp4 >> 10) * fp_vibrato4) >> 5;
 			}
 
-			int sample1, sample2, sample3, sample4;
+			float sample1, sample2, sample3, sample4;
 			if (mode == MODE_MONOPHONIC) {
-				sample1 = (fp_smoothamp1 * waveTable[fp_smoothFilterAmp1 >> 15][(ph1 >> 15) & WAVE_MASK]) >> 14;
+				sample1 = smoothamp1 * waveTable[fp_smoothFilterAmp1 >> 15][(ph1 >> 15) & WAVE_MASK] / 16768.0f;
 				sample2 = 0;
 				sample3 = 0;
 				sample4 = 0;
 			} else if (mode == MODE_POLYPHONIC) {
-				sample1 = (fp_smoothamp1 * waveTable[fp_smoothFilterAmp1 >> 15][(ph1 >> 15) & WAVE_MASK]) >> 14;
-				sample2 = (fp_smoothamp2 * waveTable[fp_smoothFilterAmp2 >> 15][(ph2 >> 15) & WAVE_MASK]) >> 14;
-				sample3 = (fp_smoothamp3 * waveTable[fp_smoothFilterAmp3 >> 15][(ph3 >> 15) & WAVE_MASK]) >> 14;
-				sample4 = (fp_smoothamp4 * waveTable[fp_smoothFilterAmp4 >> 15][(ph4 >> 15) & WAVE_MASK]) >> 14;
+				sample1 = smoothamp1 * waveTable[fp_smoothFilterAmp1 >> 15][(ph1 >> 15) & WAVE_MASK] / 16768.0f;
+				sample2 = smoothamp2 * waveTable[fp_smoothFilterAmp2 >> 15][(ph2 >> 15) & WAVE_MASK] / 16768.0f;
+				sample3 = smoothamp3 * waveTable[fp_smoothFilterAmp3 >> 15][(ph3 >> 15) & WAVE_MASK] / 16768.0f;
+				sample4 = smoothamp4 * waveTable[fp_smoothFilterAmp4 >> 15][(ph4 >> 15) & WAVE_MASK] / 16768.0f;
 			} else { // chorus
-				sample1 = (fp_smoothamp1 * waveTable[fp_smoothFilterAmp1 >> 15][(ph1 >> 15) & WAVE_MASK]) >> 15;
-				sample2 = (fp_smoothamp2 * waveTable[fp_smoothFilterAmp2 >> 15][(ph2 >> 15) & WAVE_MASK]) >> 15;
-				sample3 = (fp_smoothamp3 * waveTable[fp_smoothFilterAmp3 >> 15][(ph3 >> 15) & WAVE_MASK]) >> 15;
-				sample4 = (fp_smoothamp4 * waveTable[fp_smoothFilterAmp4 >> 15][(ph4 >> 15) & WAVE_MASK]) >> 15;
+				sample1 = smoothamp1 * waveTable[fp_smoothFilterAmp1 >> 15][(ph1 >> 15) & WAVE_MASK] / 32768.0f;
+				sample2 = smoothamp2 * waveTable[fp_smoothFilterAmp2 >> 15][(ph2 >> 15) & WAVE_MASK] / 32768.0f;
+				sample3 = smoothamp3 * waveTable[fp_smoothFilterAmp3 >> 15][(ph3 >> 15) & WAVE_MASK] / 32768.0f;
+				sample4 = smoothamp4 * waveTable[fp_smoothFilterAmp4 >> 15][(ph4 >> 15) & WAVE_MASK] / 32768.0f;
 			}
 
 			// clip
 			if (ampOverdrive > 0 && ampOverdrivePerVoice) {
-				sample1 = sample1 << ampOverdrive;
-				if (sample1 > K16) {
-					int oversample = sample1 - K16;
-					sample1 = oversample / 2 + K16;
-					if (sample1 > K32) {
-						sample1 = K32;
-					}
-				} else if (sample1 < -K16) {
-					int oversample = sample1 + K16;
-					sample1 = oversample / 2 - K16;
-					if (sample1 < -K32) {
-						sample1 = -K32;
-					}
-				}
-				sample2 = sample2 << ampOverdrive;
-				if (sample2 > K16) {
-					int oversample = sample2 - K16;
-					sample2 = oversample / 2 + K16;
-					if (sample2 > K32) {
-						sample2 = K32;
-					}
-				} else if (sample2 < -K16) {
-					int oversample = sample2 + K16;
-					sample2 = oversample / 2 - K16;
-					if (sample2 < -K32) {
-						sample2 = -K32;
-					}
-				}
-				sample3 = sample3 << ampOverdrive;
-				if (sample3 > K16) {
-					int oversample = sample3 - K16;
-					sample3 = oversample / 2 + K16;
-					if (sample3 > K32) {
-						sample3 = K32;
-					}
-				} else if (sample3 < -K16) {
-					int oversample = sample3 + K16;
-					sample3 = oversample / 2 - K16;
-					if (sample3 < -K32) {
-						sample3 = -K32;
-					}
-				}
-				sample4 = sample4 << ampOverdrive;
-				if (sample4 > K16) {
-					int oversample = sample4 - K16;
-					sample4 = oversample / 2 + K16;
-					if (sample4 > K32) {
-						sample4 = K32;
-					}
-				} else if (sample4 < -K16) {
-					int oversample = sample4 + K16;
-					sample4 = oversample / 2 - K16;
-					if (sample4 < -K32) {
-						sample4 = -K32;
-					}
-				}
+				sample1 = (float)Math.pow(sample1, ampOverdrive);
+				sample1 = range(sample2, -1.0f, 1.0f);
+				sample2 = (float)Math.pow(sample2, ampOverdrive);
+				sample2 = range(sample2, -1.0f, 1.0f);
+				sample3 = (float)Math.pow(sample3, ampOverdrive);
+				sample3 = range(sample3, -1.0f, 1.0f);
+				sample4 = (float)Math.pow(sample4, ampOverdrive);
+				sample4 = range(sample4, -1.0f, 1.0f);
 			}
-			int sample = sample1 + sample2 + sample3 + sample4;
+			float sample = sample1 + sample2 + sample3 + sample4;
 			if (ampOverdrive > 0 && !ampOverdrivePerVoice) {
-				sample = sample << ampOverdrive;
-				if (sample > K16) {
-					int oversample = sample - K16;
-					sample = oversample / 2 + K16;
-					if (sample > K32) {
-						sample = K32;
-					}
-				} else if (sample < -K16) {
-					int oversample = sample + K16;
-					sample = oversample / 2 - K16;
-					if (sample < -K32) {
-						sample = -K32;
-					}
-				}
+				sample = (float)Math.pow(sample, ampOverdrive);
+				sample = range(sample, -1.0f, 1.0f);
 			}
 
-			// Smooth
-//		int osample = sample;
-////		sample = (lastLastSample + 2 * lastSample + 3 * sample) / 6;
-//		sample = (lastLastSample + lastSample + sample) / 3;
-//		lastLastSample = lastSample;
-//		lastSample = osample;
+			// adjust the volume based on the echo?
+			//sample = sample * (K16 - (fp_echoAmount >> 3) - (fp_echoDelay >> 3)) >> 14;
 
-			sample = sample * (K16 - (fp_echoAmount >> 3) - (fp_echoDelay >> 3)) >> 14;
-
-			int sampleLeft = sample;
-			int sampleRight = sample;
+			float sampleLeft = sample;
+			float sampleRight = sample;
 
 			// Echo/flange effect
 			flangeIndex += fp_flangeRate;
@@ -1294,10 +1223,10 @@ public class WaveSynth extends AbstractInstrument {
 			echoTable[echoIndex] = sample;
 			int delayIndexLeft = echoIndex - (fp_flangingEchoDelay >> 1);
 			delayIndexLeft = (delayIndexLeft + sampleRate) % sampleRate;
-			sampleLeft += (fp_echoAmount * echoTable[delayIndexLeft]) >> 15;
+			sampleLeft += echoAmount * echoTable[delayIndexLeft];
 			int delayIndexRight = echoIndex - (fp_flangingEchoDelay);
 			delayIndexRight = (delayIndexRight + sampleRate) % sampleRate;
-			sampleRight += (fp_echoAmount * echoTable[delayIndexRight]) >> 15;
+			sampleRight += echoAmount * echoTable[delayIndexRight];
 			echoTable[echoIndex] += echoFeedback * echoTable[delayIndexRight];
 
 			if (replaying && recordingIndex < maxRecordingIndex) {
@@ -1314,8 +1243,8 @@ public class WaveSynth extends AbstractInstrument {
 				recordBuffer[recordingIndex + 1] = (short)sampleRight;
 			}
 
-			output[0] =  sampleLeft >> 16;
-			output[1] = sampleRight >> 16;
+			output[0] =  sampleLeft;
+			output[1] = sampleRight;
 
 			if (recording || replaying) {
 				if (recording && recordingIndex < RECORDING_BUFFER_SIZE - 4) {
@@ -1417,7 +1346,6 @@ public class WaveSynth extends AbstractInstrument {
 					amplitude1 = Math.max(0, amplitude1 - fp_ampRelease);
 				}
 				amp1 = ampVolume * amplitude1 * amplitude1 * amplitude1 / (1.0f + echoAmount) * 96 / (96 + 12 * octave + +key + note1) * velocity1 * sVolumeExpression;
-				fp_amp1 = (int) (amp1 * K32);
 				//filter env1
 				if (keyDown1) {
 					if (filterAttacking1) {
@@ -1490,7 +1418,6 @@ public class WaveSynth extends AbstractInstrument {
 					amplitude2 = Math.max(0, amplitude2 - fp_ampRelease);
 				}
 				amp2 = ampVolume * amplitude2 * amplitude2 * amplitude2 / (1.0f + echoAmount) * 96 / (96 + 12 * octave + key + note2) * velocity2 * sVolumeExpression;
-				fp_amp2 = (int) (amp2 * K32);
 				if (keyDown2) {
 					if (filterAttacking2) {
 						filterEnvAmplitude2 = Math.min(1, filterEnvAmplitude2 + fp_filterAttack);
@@ -1558,7 +1485,6 @@ public class WaveSynth extends AbstractInstrument {
 					amplitude3 = Math.max(0, amplitude3 - fp_ampRelease);
 				}
 				amp3 = ampVolume * amplitude3 * amplitude3 * amplitude3 / (1.0f + echoAmount) * 96 / (96 + 12 * octave + key + note3) * velocity3 * sVolumeExpression;
-				fp_amp3 = (int) (amp3 * K32);
 				if (keyDown3) {
 					if (filterAttacking3) {
 						filterEnvAmplitude3 = Math.min(1, filterEnvAmplitude3 + fp_filterAttack);
@@ -1626,7 +1552,6 @@ public class WaveSynth extends AbstractInstrument {
 					amplitude4 = Math.max(0, amplitude4 - fp_ampRelease);
 				}
 				amp4 = ampVolume * amplitude4 * amplitude4 * amplitude4 / (1.0f + echoAmount) * 96 / (96 + 12 * octave + key + note4) * velocity4 * sVolumeExpression;
-				fp_amp4 = (int) (amp4 * K32);
 				if (keyDown4) {
 					if (filterAttacking4) {
 						filterEnvAmplitude4 = Math.min(1, filterEnvAmplitude4 + fp_filterAttack);
@@ -1686,7 +1611,6 @@ public class WaveSynth extends AbstractInstrument {
 				}
 
 				fp_echoDelay = (int) (echoDelay * sampleRate);
-				fp_echoAmount = (int) (echoAmount * K32);
 				fp_flangeRate = (int) (flangeRate * 256);
 				fp_flangeAmount = (int) (flangeAmount * 256);
 
