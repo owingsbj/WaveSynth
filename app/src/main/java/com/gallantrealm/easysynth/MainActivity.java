@@ -8,7 +8,6 @@ import java.io.InputStream;
 import java.util.Locale;
 import com.gallantrealm.android.ContentUriUtil;
 import com.gallantrealm.android.Translator;
-import com.gallantrealm.easysynth.R;
 import com.gallantrealm.easysynth.theme.AuraTheme;
 import com.gallantrealm.easysynth.theme.CustomTheme;
 import com.gallantrealm.easysynth.theme.IceTheme;
@@ -19,11 +18,8 @@ import com.gallantrealm.easysynth.theme.SunsetTheme;
 import com.gallantrealm.easysynth.theme.TeaTheme;
 import com.gallantrealm.easysynth.theme.TropicalTheme;
 import com.gallantrealm.easysynth.theme.WoodTheme;
-import com.gallantrealm.easysynth.ClientModel;
-import com.gallantrealm.easysynth.FastMath;
 import com.gallantrealm.android.InputDialog;
 import com.gallantrealm.android.MessageDialog;
-import com.gallantrealm.mysynth.MySynth;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
@@ -36,7 +32,6 @@ import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
-import android.hardware.usb.UsbDevice;
 import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Build;
@@ -254,7 +249,7 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 
 	int[] keyvoice = new int[25];
 
-	EasySynth synth;
+	WaveSynth synth;
 
 	private boolean dirty;
 
@@ -274,7 +269,7 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 
 		clientModel.loadPreferences(this);
 
-		synth = new EasySynth(this);
+		synth = new WaveSynth(this);
 
 		this.setVolumeControlStream(AudioManager.STREAM_MUSIC);
 
@@ -502,13 +497,13 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 			public void onItemSelected(AdapterView av, View v, int arg2, long arg3) {
 				int velocitySelection = velocitySpinner.getSelectedItemPosition();
 				if (velocitySelection == 0) { // none
-					synth.velocityType = EasySynth.VELOCITY_NONE;
+					synth.velocityType = WaveSynth.VELOCITY_NONE;
 				} else if (velocitySelection == 1) { // volume
-					synth.velocityType = EasySynth.VELOCITY_VOLUME;
+					synth.velocityType = WaveSynth.VELOCITY_VOLUME;
 				} else if (velocitySelection == 2) { // filter
-					synth.velocityType = EasySynth.VELOCITY_FILTER;
+					synth.velocityType = WaveSynth.VELOCITY_FILTER;
 				} else if (velocitySelection == 3) { // both
-					synth.velocityType = EasySynth.VELOCITY_BOTH;
+					synth.velocityType = WaveSynth.VELOCITY_BOTH;
 				}
 				synth.updateParams();
 			}
@@ -526,17 +521,17 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 			public void onItemSelected(AdapterView av, View v, int arg2, long arg3) {
 				int expressionSelection = expressionSpinner.getSelectedItemPosition();
 				if (expressionSelection == 0) { // none
-					synth.expressionType = EasySynth.EXPRESSION_NONE;
+					synth.expressionType = WaveSynth.EXPRESSION_NONE;
 				} else if (expressionSelection == 1) { // volume
-					synth.expressionType = EasySynth.EXPRESSION_VOLUME;
+					synth.expressionType = WaveSynth.EXPRESSION_VOLUME;
 				} else if (expressionSelection == 2) { // filter
-					synth.expressionType = EasySynth.EXPRESSION_FILTER;
+					synth.expressionType = WaveSynth.EXPRESSION_FILTER;
 				} else if (expressionSelection == 3) { // vibrato
-					synth.expressionType = EasySynth.EXPRESSION_VIBRATO;
+					synth.expressionType = WaveSynth.EXPRESSION_VIBRATO;
 				} else if (expressionSelection == 4) { // pitch
-					synth.expressionType = EasySynth.EXPRESSION_PITCH;
+					synth.expressionType = WaveSynth.EXPRESSION_PITCH;
 				} else if (expressionSelection == 5) { // both
-					synth.expressionType = EasySynth.EXPRESSION_VOLUME_AND_FILTER;
+					synth.expressionType = WaveSynth.EXPRESSION_VOLUME_AND_FILTER;
 				}
 				synth.updateParams();
 			}
@@ -1661,29 +1656,29 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 					harmonic31.setProgress(0);
 					harmonic32.setProgress(0);
 				}
-				if (synth.filterType == EasySynth.FILTER_LOWPASS) {
+				if (synth.filterType == WaveSynth.FILTER_LOWPASS) {
 					filterTypeSpinner.setSelection(0);
-				} else if (synth.filterType == EasySynth.FILTER_BANDPASS) {
+				} else if (synth.filterType == WaveSynth.FILTER_BANDPASS) {
 					filterTypeSpinner.setSelection(1);
-				} else if (synth.filterType == EasySynth.FILTER_FADE) {
+				} else if (synth.filterType == WaveSynth.FILTER_FADE) {
 					filterTypeSpinner.setSelection(3);
-				} else if (synth.filterType == EasySynth.FILTER_HIGHPASS) {
+				} else if (synth.filterType == WaveSynth.FILTER_HIGHPASS) {
 					filterTypeSpinner.setSelection(2);
-				} else if (synth.filterType == EasySynth.FILTER_COMB1) {
+				} else if (synth.filterType == WaveSynth.FILTER_COMB1) {
 					filterTypeSpinner.setSelection(4);
-				} else if (synth.filterType == EasySynth.FILTER_COMB2) {
+				} else if (synth.filterType == WaveSynth.FILTER_COMB2) {
 					filterTypeSpinner.setSelection(5);
-				} else if (synth.filterType == EasySynth.FILTER_COMB3) {
+				} else if (synth.filterType == WaveSynth.FILTER_COMB3) {
 					filterTypeSpinner.setSelection(6);
-				} else if (synth.filterType == EasySynth.FILTER_COMB4) {
+				} else if (synth.filterType == WaveSynth.FILTER_COMB4) {
 					filterTypeSpinner.setSelection(7);
-				} else if (synth.filterType == EasySynth.FILTER_FORMANT1) {
+				} else if (synth.filterType == WaveSynth.FILTER_FORMANT1) {
 					filterTypeSpinner.setSelection(8);
-				} else if (synth.filterType == EasySynth.FILTER_FORMANT2) {
+				} else if (synth.filterType == WaveSynth.FILTER_FORMANT2) {
 					filterTypeSpinner.setSelection(9);
-				} else if (synth.filterType == EasySynth.FILTER_FORMANT3) {
+				} else if (synth.filterType == WaveSynth.FILTER_FORMANT3) {
 					filterTypeSpinner.setSelection(10);
-				} else if (synth.filterType == EasySynth.FILTER_FORMANT4) {
+				} else if (synth.filterType == WaveSynth.FILTER_FORMANT4) {
 					filterTypeSpinner.setSelection(11);
 				}
 				filterResonance.setProgress((int) (synth.filterResonance * 100));
@@ -2066,7 +2061,7 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 
 		int voice = 1;
 
-		if (synth.mode == EasySynth.MODE_MONOPHONIC) {
+		if (synth.mode == WaveSynth.MODE_MONOPHONIC) {
 			if (type == PRESS) {
 				keyPress(1, note, velocity);
 				initialX = x;
@@ -2093,7 +2088,7 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 					synth.expression(FastMath.max(0, initialY - y) / keyboard.getHeight());
 				}
 			}
-		} else if (synth.mode == EasySynth.MODE_CHORUS) {
+		} else if (synth.mode == WaveSynth.MODE_CHORUS) {
 			if (type == PRESS) {
 				keyPress(1, note, velocity);
 				initialX = x;
@@ -2271,7 +2266,7 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 			if (!keyHeld[note]) {
 				synth.expression(0);
 				synth.keyPress(voice, note, velocity, false, true);
-				if (synth.mode != EasySynth.MODE_POLYPHONIC) {
+				if (synth.mode != WaveSynth.MODE_POLYPHONIC) {
 					clearHolds();
 				}
 				keyHeld[note] = true;

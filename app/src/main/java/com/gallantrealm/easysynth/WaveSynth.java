@@ -7,7 +7,7 @@ import android.media.AudioTrack;
 import com.gallantrealm.mysynth.AbstractInstrument;
 import com.gallantrealm.mysynth.MySynth;
 
-public class EasySynth extends AbstractInstrument {
+public class WaveSynth extends AbstractInstrument {
 
 	private static final int K32 = 32768;
 	private static final int K16 = 16384;
@@ -126,7 +126,7 @@ public class EasySynth extends AbstractInstrument {
 
 	private MySynth synth;
 
-	public EasySynth(Context context) {
+	public WaveSynth(Context context) {
 		synth = MySynth.create(context);
 		sampleRate = AudioTrack.getNativeOutputSampleRate(AudioManager.STREAM_MUSIC); // usually 44100
 		envelopeSampleRate = 100;  // 100 times a second
