@@ -1,8 +1,6 @@
 package com.gallantrealm.easysynth;
 
-import com.gallantrealm.android.Translator;
-
-public class EasySynthTranslator extends Translator {
+public class Translator extends com.gallantrealm.android.Translator {
 
 	@Override
 	public String translateSpanish(String text) {

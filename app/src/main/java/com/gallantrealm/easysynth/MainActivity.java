@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Locale;
 import com.gallantrealm.android.ContentUriUtil;
-import com.gallantrealm.android.Translator;
 import com.gallantrealm.easysynth.theme.AuraTheme;
 import com.gallantrealm.easysynth.theme.CustomTheme;
 import com.gallantrealm.easysynth.theme.IceTheme;
@@ -274,9 +273,9 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 		this.setVolumeControlStream(AudioManager.STREAM_MUSIC);
 
 		mainLayout = findViewById(R.id.mainLayout);
-		Translator.setTranslator(new EasySynthTranslator());
+		com.gallantrealm.android.Translator.setTranslator(new Translator());
 
-		Translator.getTranslator().translate(mainLayout);
+		com.gallantrealm.android.Translator.getTranslator().translate(mainLayout);
 
 		buyButton = (Button) findViewById(R.id.buyButton);
 		soundButton = (Button) findViewById(R.id.soundButton);
@@ -489,7 +488,7 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 		polyRadio.setOnCheckedChangeListener(this);
 		chorusRadio.setOnCheckedChangeListener(this);
 
-		ArrayAdapter<CharSequence> velocityAdapter = Translator.getArrayAdapter(this, R.layout.spinner_item, new String[] { "None", "Volume", "Filter", "Both" });
+		ArrayAdapter<CharSequence> velocityAdapter = com.gallantrealm.android.Translator.getArrayAdapter(this, R.layout.spinner_item, new String[] { "None", "Volume", "Filter", "Both" });
 		velocityAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 		velocitySpinner.setAdapter(velocityAdapter);
 		velocitySpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -513,7 +512,7 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 			}
 		});
 
-		ArrayAdapter<CharSequence> expressionAdapter = Translator.getArrayAdapter(this, R.layout.spinner_item, new String[] { "None", "Volume", "Filter", "Vibrato", "Pitch", "Volume+Filter" });
+		ArrayAdapter<CharSequence> expressionAdapter = com.gallantrealm.android.Translator.getArrayAdapter(this, R.layout.spinner_item, new String[] { "None", "Volume", "Filter", "Vibrato", "Pitch", "Volume+Filter" });
 		expressionAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 		expressionSpinner.setAdapter(expressionAdapter);
 		expressionSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -554,7 +553,7 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 			}
 		});
 
-		ArrayAdapter<CharSequence> keyAdapter = Translator.getArrayAdapter(this, R.layout.spinner_item, new String[] { "C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B" });
+		ArrayAdapter<CharSequence> keyAdapter = com.gallantrealm.android.Translator.getArrayAdapter(this, R.layout.spinner_item, new String[] { "C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B" });
 		keyAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 		keySpinner.setAdapter(keyAdapter);
 		keySpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -572,12 +571,12 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 
 		setTheme(clientModel.getBackgroundName(), clientModel.getCustomBackgroundPath());
 
-		ArrayAdapter<CharSequence> filterTypeAdapter = Translator.getArrayAdapter(this, R.layout.spinner_item,
+		ArrayAdapter<CharSequence> filterTypeAdapter = com.gallantrealm.android.Translator.getArrayAdapter(this, R.layout.spinner_item,
 				new String[] { "Low Pass", "Band Pass", "High Pass", "Fade", "Comb 1", "Comb 2", "Comb 3", "Comb 4", "Formant 1", "Formant 2", "Formant 3", "Formant 4" });
 		filterTypeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 		filterTypeSpinner.setAdapter(filterTypeAdapter);
 
-		ArrayAdapter<CharSequence> vibratoDestinationAdapter = Translator.getArrayAdapter(this, R.layout.spinner_item, new String[] { "Pitch", "Filter", "Amp" });
+		ArrayAdapter<CharSequence> vibratoDestinationAdapter = com.gallantrealm.android.Translator.getArrayAdapter(this, R.layout.spinner_item, new String[] { "Pitch", "Filter", "Amp" });
 		vibratoDestinationAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 		vibratoDestinationSpinner.setAdapter(vibratoDestinationAdapter);
 		vibratoDestinationSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -594,7 +593,7 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 
 		});
 
-		ArrayAdapter<CharSequence> vibratoTypeAdapter = Translator.getArrayAdapter(this, R.layout.spinner_item, new String[] { "Wave", "Ramp Up", "Ramp Down", "Two Tone", "Noise", "Pulse 1/4", "Pulse 1/8", "Pulse 1/16" });
+		ArrayAdapter<CharSequence> vibratoTypeAdapter = com.gallantrealm.android.Translator.getArrayAdapter(this, R.layout.spinner_item, new String[] { "Wave", "Ramp Up", "Ramp Down", "Two Tone", "Noise", "Pulse 1/4", "Pulse 1/8", "Pulse 1/16" });
 		vibratoTypeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 		vibratoTypeSpinner.setAdapter(vibratoTypeAdapter);
 		vibratoTypeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -612,7 +611,7 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 
 		});
 
-		ArrayAdapter<CharSequence> vibrato2DestinationAdapter = Translator.getArrayAdapter(this, R.layout.spinner_item, new String[] { "Pitch", "Filter", "Amp", "Mod Pitch", "Mod Amp" });
+		ArrayAdapter<CharSequence> vibrato2DestinationAdapter = com.gallantrealm.android.Translator.getArrayAdapter(this, R.layout.spinner_item, new String[] { "Pitch", "Filter", "Amp", "Mod Pitch", "Mod Amp" });
 		vibrato2DestinationAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 		vibrato2DestinationSpinner.setAdapter(vibrato2DestinationAdapter);
 		vibrato2DestinationSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -629,7 +628,7 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 
 		});
 
-		ArrayAdapter<CharSequence> vibrato2TypeAdapter = Translator.getArrayAdapter(this, R.layout.spinner_item, new String[] { "Wave", "Ramp Up", "Ramp Down", "Two Tone", "Noise", "Pulse 1/4", "Pulse 1/8", "Pulse 1/16" });
+		ArrayAdapter<CharSequence> vibrato2TypeAdapter = com.gallantrealm.android.Translator.getArrayAdapter(this, R.layout.spinner_item, new String[] { "Wave", "Ramp Up", "Ramp Down", "Two Tone", "Noise", "Pulse 1/4", "Pulse 1/8", "Pulse 1/16" });
 		vibrato2TypeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 		vibrato2TypeSpinner.setAdapter(vibrato2TypeAdapter);
 		vibrato2TypeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
