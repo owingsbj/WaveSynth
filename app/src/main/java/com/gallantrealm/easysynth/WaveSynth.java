@@ -7,6 +7,10 @@ import android.media.AudioTrack;
 import com.gallantrealm.mysynth.AbstractInstrument;
 import com.gallantrealm.mysynth.MySynth;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+
 public class WaveSynth extends AbstractInstrument {
 
 	private static final int K32 = 32768;
@@ -500,7 +504,40 @@ public class WaveSynth extends AbstractInstrument {
 
 	public void keyPress(int voice, int note, float velocity, boolean glide, boolean startsSilent) {
 		System.out.println("EasySynth.keyPress voice="+voice+"  note="+note);
-		internalKeyPress( voice,  note,  velocity,  glide,  startsSilent, 0.0f);
+		if (sequenceRate > 0) {
+			sequencerBaseNote = note;
+			if (!sequencerRunning) {
+				sequencerRunning = true;
+				sequenceIndex = 0;
+				sequenceNote = sequence[(int) sequenceIndex];
+				sequenceIndex = SEQUENCE_LENGTH - 0.01f; // to force immediate play
+			}
+		} else {
+			if (mode == MODE_MONOPHONIC) {
+				releaseKey1 = false;
+				internalKeyPress(1, note, velocity, glide, startsSilent, 0);
+			} else if (mode == MODE_CHORUS) {
+				releaseKey1 = false;
+				releaseKey2 = false;
+				releaseKey3 = false;
+				releaseKey4 = false;
+				internalKeyPress(1, note, velocity, glide, startsSilent, -0.07f * chorusWidth);
+				internalKeyPress(2, note, velocity, glide, startsSilent, -0.03f * chorusWidth);
+				internalKeyPress(3, note, velocity, glide, startsSilent, +0.05f * chorusWidth);
+				internalKeyPress(4, note, velocity, glide, startsSilent, +0.11f * chorusWidth);
+			} else {
+				if (voice == 1) {
+					releaseKey1 = false;
+				} else if (voice == 2) {
+					releaseKey2 = false;
+				} else if (voice == 3) {
+					releaseKey3 = false;
+				} else if (voice == 4) {
+					releaseKey4 = false;
+				}
+				internalKeyPress(voice, note, velocity, glide, startsSilent, 0);
+			}
+		}
 	}
 
 	public int getVoice(int note) {
@@ -509,7 +546,22 @@ public class WaveSynth extends AbstractInstrument {
 
 	public void keyRelease(int voice) {
 		System.out.println("EasySynth.keyRelease voice="+voice);
-		internalKeyRelease(voice);
+		if (sequenceRate > 0) {
+			sequencerRunning = false;
+			internalKeyRelease(1);
+			internalKeyRelease(2);
+			internalKeyRelease(3);
+			internalKeyRelease(4);
+		} else {
+			if (mode == MODE_CHORUS) {
+				internalKeyRelease(1);
+				internalKeyRelease(2);
+				internalKeyRelease(3);
+				internalKeyRelease(4);
+			} else {
+				internalKeyRelease(voice);
+			}
+		}
 	}
 
 	public void allSoundOff() {
@@ -524,19 +576,27 @@ public class WaveSynth extends AbstractInstrument {
 	}
 
 	public void startRecording() {
+		synth.startRecording();
 	}
 
 	public void stopRecording() {
+		synth.stopRecording();
 	}
 
 	public void playbackRecording() {
+		synth.playbackRecording();
 	}
 
 	public void saveRecording(String filename) {
+		try {
+			synth.saveRecording(new FileOutputStream(filename));
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	public int getRecordTime() {
-		return 0;
+		return synth.getRecordTime();
 	}
 
 
@@ -842,14 +902,6 @@ public class WaveSynth extends AbstractInstrument {
 	private int sequenceNote;
 	private float sequenceIndex;
 	private boolean sequencerRunning;
-
-	private boolean recording;
-	private boolean replaying;
-	private int recordingIndex;
-	private int maxRecordingIndex;
-
-	public static int RECORDING_BUFFER_SIZE = (MAX_SAMPLE_RATE * 2 * 60 * 5);
-	private short[] recordBuffer = new short[RECORDING_BUFFER_SIZE]; // 5 minutes of record time
 
 	private float[] echoTable = new float[MAX_SAMPLE_RATE]; // 1 sec of echo
 
@@ -1229,33 +1281,12 @@ public class WaveSynth extends AbstractInstrument {
 			sampleRight += echoAmount * echoTable[delayIndexRight];
 			echoTable[echoIndex] += echoFeedback * echoTable[delayIndexRight];
 
-			if (replaying && recordingIndex < maxRecordingIndex) {
-				sampleLeft += recordBuffer[recordingIndex];
-				sampleRight += recordBuffer[recordingIndex + 1];
-			}
-
 			// Clip in range
 			sampleLeft = sampleLeft <= -K32 ? -K32 + 1 : (sampleLeft > K32 ? K32 : sampleLeft);
 			sampleRight = sampleRight <= -K32 ? -K32 + 1 : (sampleRight > K32 ? K32 : sampleRight);
 
-			if (recording) {
-				recordBuffer[recordingIndex] = (short)sampleLeft;
-				recordBuffer[recordingIndex + 1] = (short)sampleRight;
-			}
-
 			output[0] =  sampleLeft;
 			output[1] = sampleRight;
-
-			if (recording || replaying) {
-				if (recording && recordingIndex < RECORDING_BUFFER_SIZE - 4) {
-					recordingIndex += 2;
-					if (recordingIndex > maxRecordingIndex) {
-						maxRecordingIndex = recordingIndex;
-					}
-				} else if (replaying && recordingIndex < maxRecordingIndex) {
-					recordingIndex += 2;
-				}
-			}
 
 			if (t >= envelopeSampleRate) {
 				t = 0;
