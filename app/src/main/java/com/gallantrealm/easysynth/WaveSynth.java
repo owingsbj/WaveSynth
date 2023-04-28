@@ -136,7 +136,7 @@ public class WaveSynth extends AbstractInstrument {
 		synth = MySynth.create(context);
 		midi = MySynthMidi.create(context, synth, midiCallbacks);
 		sampleRate = AudioTrack.getNativeOutputSampleRate(AudioManager.STREAM_MUSIC); // usually 44100
-		envelopeSampleRate = 100;  // 100 times a second
+		envelopeSampleRate = sampleRate / ENVELOPE_RATE;
 		waveSizeDivSampleRate = (float) WAVE_SIZE / (float)sampleRate;
 
 		System.out.println("EasySynth: sampleRate="+sampleRate);
@@ -1062,595 +1062,592 @@ public class WaveSynth extends AbstractInstrument {
 	@Override
 	public void generate(float[] output) {
 		int i;
-//		for (i = 0; i < samplesPerBuff; i++) {
-			t++;
+		t++;
 
-			// vibrato2
+		// vibrato2
+		if (vibrato2Sync) {
+			int r = fp_vibrato2Rate >> 12;
+			v2ph1 += (fp_freq1 * r) >> 2;
+			v2ph2 += (fp_freq2 * r) >> 2;
+			v2ph3 += (fp_freq3 * r) >> 2;
+			v2ph4 += (fp_freq4 * r) >> 2;
+		} else {
+			v2ph1 += fp_vibrato2Rate;
+			v2ph2 += fp_vibrato2Rate;
+			v2ph3 += fp_vibrato2Rate;
+			v2ph4 += fp_vibrato2Rate;
+		}
+
+		// vibrato
+		if (vibratoSync) {
+			int r = fp_vibratoRate >> 12;
+			vph1 += (fp_freq1 * r) >> 2;
+			vph2 += (fp_freq2 * r) >> 2;
+			vph3 += (fp_freq3 * r) >> 2;
+			vph4 += (fp_freq4 * r) >> 2;
+		} else {
+			vph1 += fp_vibratoRate;
+			vph2 += fp_vibratoRate;
+			vph3 += fp_vibratoRate;
+			vph4 += fp_vibratoRate;
+		}
+		if (vibrato2Destination == VIBRATO_DESTINATION_MOD_PITCH) {
+			int fp_vibrato1 = (vibrato2Table[(v2ph1 >> 15) & WAVE_MASK] * fp_vibrato2Amp1) >> 15;
+			int fp_vibrato2 = (vibrato2Table[(v2ph2 >> 15) & WAVE_MASK] * fp_vibrato2Amp2) >> 15;
+			int fp_vibrato3 = (vibrato2Table[(v2ph3 >> 15) & WAVE_MASK] * fp_vibrato2Amp3) >> 15;
+			int fp_vibrato4 = (vibrato2Table[(v2ph4 >> 15) & WAVE_MASK] * fp_vibrato2Amp4) >> 15;
 			if (vibrato2Sync) {
-				int r = fp_vibrato2Rate >> 12;
-				v2ph1 += (fp_freq1 * r) >> 2;
-				v2ph2 += (fp_freq2 * r) >> 2;
-				v2ph3 += (fp_freq3 * r) >> 2;
-				v2ph4 += (fp_freq4 * r) >> 2;
-			} else {
-				v2ph1 += fp_vibrato2Rate;
-				v2ph2 += fp_vibrato2Rate;
-				v2ph3 += fp_vibrato2Rate;
-				v2ph4 += fp_vibrato2Rate;
-			}
-
-			// vibrato
-			if (vibratoSync) {
-				int r = fp_vibratoRate >> 12;
-				vph1 += (fp_freq1 * r) >> 2;
-				vph2 += (fp_freq2 * r) >> 2;
-				vph3 += (fp_freq3 * r) >> 2;
-				vph4 += (fp_freq4 * r) >> 2;
-			} else {
-				vph1 += fp_vibratoRate;
-				vph2 += fp_vibratoRate;
-				vph3 += fp_vibratoRate;
-				vph4 += fp_vibratoRate;
-			}
-			if (vibrato2Destination == VIBRATO_DESTINATION_MOD_PITCH) {
-				int fp_vibrato1 = (vibrato2Table[(v2ph1 >> 15) & WAVE_MASK] * fp_vibrato2Amp1) >> 15;
-				int fp_vibrato2 = (vibrato2Table[(v2ph2 >> 15) & WAVE_MASK] * fp_vibrato2Amp2) >> 15;
-				int fp_vibrato3 = (vibrato2Table[(v2ph3 >> 15) & WAVE_MASK] * fp_vibrato2Amp3) >> 15;
-				int fp_vibrato4 = (vibrato2Table[(v2ph4 >> 15) & WAVE_MASK] * fp_vibrato2Amp4) >> 15;
-				if (vibrato2Sync) {
 //								vph1 += ((fp_vibrato1 * (note1 + 12 * octave + key)) << 5);
 //								vph2 += ((fp_vibrato2 * (note2 + 12 * octave + key)) << 5);
 //								vph3 += ((fp_vibrato3 * (note3 + 12 * octave + key)) << 5);
 //								vph4 += ((fp_vibrato4 * (note4 + 12 * octave + key)) << 5);
-					vph1 += ((fp_vibrato1 * (fp_freq1 >> 5)) >> 5);
-					vph2 += ((fp_vibrato2 * (fp_freq2 >> 5)) >> 5);
-					vph3 += ((fp_vibrato3 * (fp_freq3 >> 5)) >> 5);
-					vph4 += ((fp_vibrato4 * (fp_freq4 >> 5)) >> 5);
-				} else {
-					vph1 += ((fp_vibrato1 * (fp_freq1 >> 5)) >> 10);
-					vph2 += ((fp_vibrato2 * (fp_freq2 >> 5)) >> 10);
-					vph3 += ((fp_vibrato3 * (fp_freq3 >> 5)) >> 10);
-					vph4 += ((fp_vibrato4 * (fp_freq4 >> 5)) >> 10);
-				}
-			}
-			if (vibrato2Destination == VIBRATO_DESTINATION_MOD_AMP) {
-				int fp_vibrato1 = (vibrato2Table[(v2ph1 >> 15) & WAVE_MASK] * fp_vibrato2Amp1) >> 15;
-				int fp_vibrato2 = (vibrato2Table[(v2ph2 >> 15) & WAVE_MASK] * fp_vibrato2Amp2) >> 15;
-				int fp_vibrato3 = (vibrato2Table[(v2ph3 >> 15) & WAVE_MASK] * fp_vibrato2Amp3) >> 15;
-				int fp_vibrato4 = (vibrato2Table[(v2ph4 >> 15) & WAVE_MASK] * fp_vibrato2Amp4) >> 15;
-				fp_modVibratoAmp1 = (fp_vibratoAmp1 * fp_vibrato1) >> 15;
-				fp_modVibratoAmp2 = (fp_vibratoAmp2 * fp_vibrato2) >> 15;
-				fp_modVibratoAmp3 = (fp_vibratoAmp3 * fp_vibrato3) >> 15;
-				fp_modVibratoAmp4 = (fp_vibratoAmp4 * fp_vibrato4) >> 15;
+				vph1 += ((fp_vibrato1 * (fp_freq1 >> 5)) >> 5);
+				vph2 += ((fp_vibrato2 * (fp_freq2 >> 5)) >> 5);
+				vph3 += ((fp_vibrato3 * (fp_freq3 >> 5)) >> 5);
+				vph4 += ((fp_vibrato4 * (fp_freq4 >> 5)) >> 5);
 			} else {
-				fp_modVibratoAmp1 = fp_vibratoAmp1;
-				fp_modVibratoAmp2 = fp_vibratoAmp2;
-				fp_modVibratoAmp3 = fp_vibratoAmp3;
-				fp_modVibratoAmp4 = fp_vibratoAmp4;
+				vph1 += ((fp_vibrato1 * (fp_freq1 >> 5)) >> 10);
+				vph2 += ((fp_vibrato2 * (fp_freq2 >> 5)) >> 10);
+				vph3 += ((fp_vibrato3 * (fp_freq3 >> 5)) >> 10);
+				vph4 += ((fp_vibrato4 * (fp_freq4 >> 5)) >> 10);
 			}
+		}
+		if (vibrato2Destination == VIBRATO_DESTINATION_MOD_AMP) {
+			int fp_vibrato1 = (vibrato2Table[(v2ph1 >> 15) & WAVE_MASK] * fp_vibrato2Amp1) >> 15;
+			int fp_vibrato2 = (vibrato2Table[(v2ph2 >> 15) & WAVE_MASK] * fp_vibrato2Amp2) >> 15;
+			int fp_vibrato3 = (vibrato2Table[(v2ph3 >> 15) & WAVE_MASK] * fp_vibrato2Amp3) >> 15;
+			int fp_vibrato4 = (vibrato2Table[(v2ph4 >> 15) & WAVE_MASK] * fp_vibrato2Amp4) >> 15;
+			fp_modVibratoAmp1 = (fp_vibratoAmp1 * fp_vibrato1) >> 15;
+			fp_modVibratoAmp2 = (fp_vibratoAmp2 * fp_vibrato2) >> 15;
+			fp_modVibratoAmp3 = (fp_vibratoAmp3 * fp_vibrato3) >> 15;
+			fp_modVibratoAmp4 = (fp_vibratoAmp4 * fp_vibrato4) >> 15;
+		} else {
+			fp_modVibratoAmp1 = fp_vibratoAmp1;
+			fp_modVibratoAmp2 = fp_vibratoAmp2;
+			fp_modVibratoAmp3 = fp_vibratoAmp3;
+			fp_modVibratoAmp4 = fp_vibratoAmp4;
+		}
 
-			// oscillators
-			ph1 += fp_freq1;
-			ph2 += fp_freq2;
-			ph3 += fp_freq3;
-			ph4 += fp_freq4;
-			if (vibratoDestination == VIBRATO_DESTINATION_PITCH) {
-				int fp_vibrato1 = (vibratoTable[(vph1 >> 15) & WAVE_MASK] * fp_modVibratoAmp1) >> 15;
-				int fp_vibrato2 = (vibratoTable[(vph2 >> 15) & WAVE_MASK] * fp_modVibratoAmp2) >> 15;
-				int fp_vibrato3 = (vibratoTable[(vph3 >> 15) & WAVE_MASK] * fp_modVibratoAmp3) >> 15;
-				int fp_vibrato4 = (vibratoTable[(vph4 >> 15) & WAVE_MASK] * fp_modVibratoAmp4) >> 15;
-				if (vibratoSync) {
-					ph1 += ((fp_vibrato1 * (note1 + 12 * octave + key)) << 2);
-					ph2 += ((fp_vibrato2 * (note2 + 12 * octave + key)) << 2);
-					ph3 += ((fp_vibrato3 * (note3 + 12 * octave + key)) << 2);
-					ph4 += ((fp_vibrato4 * (note4 + 12 * octave + key)) << 2);
-				} else {
-					ph1 += ((fp_vibrato1 * (fp_freq1 >> 5)) >> 10);
-					ph2 += ((fp_vibrato2 * (fp_freq2 >> 5)) >> 10);
-					ph3 += ((fp_vibrato3 * (fp_freq3 >> 5)) >> 10);
-					ph4 += ((fp_vibrato4 * (fp_freq4 >> 5)) >> 10);
+		// oscillators
+		ph1 += fp_freq1;
+		ph2 += fp_freq2;
+		ph3 += fp_freq3;
+		ph4 += fp_freq4;
+		if (vibratoDestination == VIBRATO_DESTINATION_PITCH) {
+			int fp_vibrato1 = (vibratoTable[(vph1 >> 15) & WAVE_MASK] * fp_modVibratoAmp1) >> 15;
+			int fp_vibrato2 = (vibratoTable[(vph2 >> 15) & WAVE_MASK] * fp_modVibratoAmp2) >> 15;
+			int fp_vibrato3 = (vibratoTable[(vph3 >> 15) & WAVE_MASK] * fp_modVibratoAmp3) >> 15;
+			int fp_vibrato4 = (vibratoTable[(vph4 >> 15) & WAVE_MASK] * fp_modVibratoAmp4) >> 15;
+			if (vibratoSync) {
+				ph1 += ((fp_vibrato1 * (note1 + 12 * octave + key)) << 2);
+				ph2 += ((fp_vibrato2 * (note2 + 12 * octave + key)) << 2);
+				ph3 += ((fp_vibrato3 * (note3 + 12 * octave + key)) << 2);
+				ph4 += ((fp_vibrato4 * (note4 + 12 * octave + key)) << 2);
+			} else {
+				ph1 += ((fp_vibrato1 * (fp_freq1 >> 5)) >> 10);
+				ph2 += ((fp_vibrato2 * (fp_freq2 >> 5)) >> 10);
+				ph3 += ((fp_vibrato3 * (fp_freq3 >> 5)) >> 10);
+				ph4 += ((fp_vibrato4 * (fp_freq4 >> 5)) >> 10);
+			}
+		}
+		if (vibrato2Destination == VIBRATO_DESTINATION_PITCH) {
+			int fp_vibrato1 = (vibrato2Table[(v2ph1 >> 15) & WAVE_MASK] * fp_vibrato2Amp1) >> 15;
+			int fp_vibrato2 = (vibrato2Table[(v2ph2 >> 15) & WAVE_MASK] * fp_vibrato2Amp2) >> 15;
+			int fp_vibrato3 = (vibrato2Table[(v2ph3 >> 15) & WAVE_MASK] * fp_vibrato2Amp3) >> 15;
+			int fp_vibrato4 = (vibrato2Table[(v2ph4 >> 15) & WAVE_MASK] * fp_vibrato2Amp4) >> 15;
+			if (vibratoSync) {
+				ph1 += ((fp_vibrato1 * (note1 + 12 * octave + key)) << 2);
+				ph2 += ((fp_vibrato2 * (note2 + 12 * octave + key)) << 2);
+				ph3 += ((fp_vibrato3 * (note3 + 12 * octave + key)) << 2);
+				ph4 += ((fp_vibrato4 * (note4 + 12 * octave + key)) << 2);
+			} else {
+				ph1 += ((fp_vibrato1 * (fp_freq1 >> 5)) >> 10);
+				ph2 += ((fp_vibrato2 * (fp_freq2 >> 5)) >> 10);
+				ph3 += ((fp_vibrato3 * (fp_freq3 >> 5)) >> 10);
+				ph4 += ((fp_vibrato4 * (fp_freq4 >> 5)) >> 10);
+			}
+		}
+
+		// amps
+		smoothamp1 = (63 * smoothamp1 + amp1) / 64;;
+		smoothamp2 = (63 * smoothamp2 + amp2) / 64;;
+		smoothamp3 = (63 * smoothamp3 + amp3) / 64;
+		smoothamp4 = (63 * smoothamp4 + amp4) /64;
+		if (vibratoDestination == VIBRATO_DESTINATION_AMP) {
+			int fp_vibrato1 = K32 - (((-vibratoTable[(vph1 >> 15) & WAVE_MASK] + K32) * fp_modVibratoAmp1) >> 16);
+			int fp_vibrato2 = K32 - (((-vibratoTable[(vph2 >> 15) & WAVE_MASK] + K32) * fp_modVibratoAmp2) >> 16);
+			int fp_vibrato3 = K32 - (((-vibratoTable[(vph3 >> 15) & WAVE_MASK] + K32) * fp_modVibratoAmp3) >> 16);
+			int fp_vibrato4 = K32 - (((-vibratoTable[(vph4 >> 15) & WAVE_MASK] + K32) * fp_modVibratoAmp4) >> 16);
+			smoothamp1 *= fp_vibrato1 / 32768.0f;
+			smoothamp2 *= fp_vibrato2 / 32768.0f;
+			smoothamp3 *= fp_vibrato3 / 32768.0f;
+			smoothamp4 *= fp_vibrato4 / 32768.0f;
+		}
+		if (vibrato2Destination == VIBRATO_DESTINATION_AMP) {
+			int fp_vibrato1 = K32 - (((-vibrato2Table[(v2ph1 >> 15) & WAVE_MASK] + K32) * fp_vibrato2Amp1) >> 16);
+			int fp_vibrato2 = K32 - (((-vibrato2Table[(v2ph2 >> 15) & WAVE_MASK] + K32) * fp_vibrato2Amp2) >> 16);
+			int fp_vibrato3 = K32 - (((-vibrato2Table[(v2ph3 >> 15) & WAVE_MASK] + K32) * fp_vibrato2Amp3) >> 16);
+			int fp_vibrato4 = K32 - (((-vibrato2Table[(v2ph4 >> 15) & WAVE_MASK] + K32) * fp_vibrato2Amp4) >> 16);
+			smoothamp1 *= fp_vibrato1 / 32768.0f;
+			smoothamp2 *= fp_vibrato2 / 32768.0f;
+			smoothamp3 *= fp_vibrato3 / 32768.0f;
+			smoothamp4 *= fp_vibrato4 / 32768.0f;
+		}
+
+		// filter amps
+		fp_smoothFilterAmp1 = (63 * fp_smoothFilterAmp1 + fp_filterAmp1) >> 6;
+		fp_smoothFilterAmp2 = (63 * fp_smoothFilterAmp2 + fp_filterAmp2) >> 6;
+		fp_smoothFilterAmp3 = (63 * fp_smoothFilterAmp3 + fp_filterAmp3) >> 6;
+		fp_smoothFilterAmp4 = (63 * fp_smoothFilterAmp4 + fp_filterAmp4) >> 6;
+		if (vibratoDestination == VIBRATO_DESTINATION_FILTER) {
+			int fp_vibrato1 = K32 - (((-vibratoTable[(vph1 >> 15) & WAVE_MASK] + K32) * fp_modVibratoAmp1) >> 15);
+			fp_vibrato1 = (fp_vibrato1 < 0) ? -fp_vibrato1 : fp_vibrato1;
+			int fp_vibrato2 = K32 - (((-vibratoTable[(vph2 >> 15) & WAVE_MASK] + K32) * fp_modVibratoAmp2) >> 15);
+			fp_vibrato2 = (fp_vibrato2 < 0) ? -fp_vibrato2 : fp_vibrato2;
+			int fp_vibrato3 = K32 - (((-vibratoTable[(vph3 >> 15) & WAVE_MASK] + K32) * fp_modVibratoAmp3) >> 15);
+			fp_vibrato3 = (fp_vibrato3 < 0) ? -fp_vibrato3 : fp_vibrato3;
+			int fp_vibrato4 = K32 - (((-vibratoTable[(vph4 >> 15) & WAVE_MASK] + K32) * fp_modVibratoAmp4) >> 15);
+			fp_vibrato4 = (fp_vibrato4 < 0) ? -fp_vibrato4 : fp_vibrato4;
+			fp_smoothFilterAmp1 = ((fp_smoothFilterAmp1 >> 10) * fp_vibrato1) >> 5;
+			fp_smoothFilterAmp2 = ((fp_smoothFilterAmp2 >> 10) * fp_vibrato2) >> 5;
+			fp_smoothFilterAmp3 = ((fp_smoothFilterAmp3 >> 10) * fp_vibrato3) >> 5;
+			fp_smoothFilterAmp4 = ((fp_smoothFilterAmp4 >> 10) * fp_vibrato4) >> 5;
+		}
+		if (vibrato2Destination == VIBRATO_DESTINATION_FILTER) {
+			int fp_vibrato1 = K32 - (((-vibrato2Table[(v2ph1 >> 15) & WAVE_MASK] + K32) * fp_vibrato2Amp1) >> 15);
+			fp_vibrato1 = (fp_vibrato1 < 0) ? -fp_vibrato1 : fp_vibrato1;
+			int fp_vibrato2 = K32 - (((-vibrato2Table[(v2ph2 >> 15) & WAVE_MASK] + K32) * fp_vibrato2Amp2) >> 15);
+			fp_vibrato2 = (fp_vibrato2 < 0) ? -fp_vibrato2 : fp_vibrato2;
+			int fp_vibrato3 = K32 - (((-vibrato2Table[(v2ph3 >> 15) & WAVE_MASK] + K32) * fp_vibrato2Amp3) >> 15);
+			fp_vibrato3 = (fp_vibrato3 < 0) ? -fp_vibrato3 : fp_vibrato3;
+			int fp_vibrato4 = K32 - (((-vibrato2Table[(v2ph4 >> 15) & WAVE_MASK] + K32) * fp_vibrato2Amp4) >> 15);
+			fp_vibrato4 = (fp_vibrato4 < 0) ? -fp_vibrato4 : fp_vibrato4;
+			fp_smoothFilterAmp1 = ((fp_smoothFilterAmp1 >> 10) * fp_vibrato1) >> 5;
+			fp_smoothFilterAmp2 = ((fp_smoothFilterAmp2 >> 10) * fp_vibrato2) >> 5;
+			fp_smoothFilterAmp3 = ((fp_smoothFilterAmp3 >> 10) * fp_vibrato3) >> 5;
+			fp_smoothFilterAmp4 = ((fp_smoothFilterAmp4 >> 10) * fp_vibrato4) >> 5;
+		}
+
+		float sample1, sample2, sample3, sample4;
+		if (mode == MODE_MONOPHONIC) {
+			sample1 = smoothamp1 * waveTable[fp_smoothFilterAmp1 >> 15][(ph1 >> 15) & WAVE_MASK] / 16768.0f;
+			sample2 = 0;
+			sample3 = 0;
+			sample4 = 0;
+		} else if (mode == MODE_POLYPHONIC) {
+			sample1 = smoothamp1 * waveTable[fp_smoothFilterAmp1 >> 15][(ph1 >> 15) & WAVE_MASK] / 16768.0f;
+			sample2 = smoothamp2 * waveTable[fp_smoothFilterAmp2 >> 15][(ph2 >> 15) & WAVE_MASK] / 16768.0f;
+			sample3 = smoothamp3 * waveTable[fp_smoothFilterAmp3 >> 15][(ph3 >> 15) & WAVE_MASK] / 16768.0f;
+			sample4 = smoothamp4 * waveTable[fp_smoothFilterAmp4 >> 15][(ph4 >> 15) & WAVE_MASK] / 16768.0f;
+		} else { // chorus
+			sample1 = smoothamp1 * waveTable[fp_smoothFilterAmp1 >> 15][(ph1 >> 15) & WAVE_MASK] / 32768.0f;
+			sample2 = smoothamp2 * waveTable[fp_smoothFilterAmp2 >> 15][(ph2 >> 15) & WAVE_MASK] / 32768.0f;
+			sample3 = smoothamp3 * waveTable[fp_smoothFilterAmp3 >> 15][(ph3 >> 15) & WAVE_MASK] / 32768.0f;
+			sample4 = smoothamp4 * waveTable[fp_smoothFilterAmp4 >> 15][(ph4 >> 15) & WAVE_MASK] / 32768.0f;
+		}
+
+		// clip
+		if (ampOverdrive > 0 && ampOverdrivePerVoice) {
+			sample1 = (float)Math.pow(sample1, ampOverdrive);
+			sample1 = range(sample2, -1.0f, 1.0f);
+			sample2 = (float)Math.pow(sample2, ampOverdrive);
+			sample2 = range(sample2, -1.0f, 1.0f);
+			sample3 = (float)Math.pow(sample3, ampOverdrive);
+			sample3 = range(sample3, -1.0f, 1.0f);
+			sample4 = (float)Math.pow(sample4, ampOverdrive);
+			sample4 = range(sample4, -1.0f, 1.0f);
+		}
+		float sample = sample1 + sample2 + sample3 + sample4;
+		if (ampOverdrive > 0 && !ampOverdrivePerVoice) {
+			sample = (float)Math.pow(sample, ampOverdrive);
+			sample = range(sample, -1.0f, 1.0f);
+		}
+
+		// adjust the volume based on the echo?
+		//sample = sample * (K16 - (fp_echoAmount >> 3) - (fp_echoDelay >> 3)) >> 14;
+
+		float sampleLeft = sample;
+		float sampleRight = sample;
+
+		// Echo/flange effect
+		flangeIndex += fp_flangeRate;
+		int fp_flangingEchoDelay = fp_echoDelay + ((fp_flangeAmount * flangeWave[(flangeIndex >> 11) & 0xFF]) >> 9);
+		echoIndex++;
+		echoIndex %= sampleRate;
+		echoTable[echoIndex] = sample;
+		int delayIndexLeft = echoIndex - (fp_flangingEchoDelay >> 1);
+		delayIndexLeft = (delayIndexLeft + sampleRate) % sampleRate;
+		sampleLeft += echoAmount * echoTable[delayIndexLeft];
+		int delayIndexRight = echoIndex - (fp_flangingEchoDelay);
+		delayIndexRight = (delayIndexRight + sampleRate) % sampleRate;
+		sampleRight += echoAmount * echoTable[delayIndexRight];
+		echoTable[echoIndex] += echoFeedback * echoTable[delayIndexRight];
+
+		// Clip in range
+		sampleLeft = sampleLeft <= -K32 ? -K32 + 1 : (sampleLeft > K32 ? K32 : sampleLeft);
+		sampleRight = sampleRight <= -K32 ? -K32 + 1 : (sampleRight > K32 ? K32 : sampleRight);
+
+		output[0] =  sampleLeft;
+		output[1] = sampleRight;
+
+		if (t >= envelopeSampleRate) {
+			t = 0;
+
+			// sequencer
+			if (sequencerRunning) {
+				float lastSequenceIndex = sequenceIndex;
+				sequenceIndex += sequenceRate / ENVELOPE_RATE / 60.0f;
+				if (sequenceIndex >= SEQUENCE_LENGTH) {
+					sequenceIndex = sequenceIndex - SEQUENCE_LENGTH;
 				}
-			}
-			if (vibrato2Destination == VIBRATO_DESTINATION_PITCH) {
-				int fp_vibrato1 = (vibrato2Table[(v2ph1 >> 15) & WAVE_MASK] * fp_vibrato2Amp1) >> 15;
-				int fp_vibrato2 = (vibrato2Table[(v2ph2 >> 15) & WAVE_MASK] * fp_vibrato2Amp2) >> 15;
-				int fp_vibrato3 = (vibrato2Table[(v2ph3 >> 15) & WAVE_MASK] * fp_vibrato2Amp3) >> 15;
-				int fp_vibrato4 = (vibrato2Table[(v2ph4 >> 15) & WAVE_MASK] * fp_vibrato2Amp4) >> 15;
-				if (vibratoSync) {
-					ph1 += ((fp_vibrato1 * (note1 + 12 * octave + key)) << 2);
-					ph2 += ((fp_vibrato2 * (note2 + 12 * octave + key)) << 2);
-					ph3 += ((fp_vibrato3 * (note3 + 12 * octave + key)) << 2);
-					ph4 += ((fp_vibrato4 * (note4 + 12 * octave + key)) << 2);
-				} else {
-					ph1 += ((fp_vibrato1 * (fp_freq1 >> 5)) >> 10);
-					ph2 += ((fp_vibrato2 * (fp_freq2 >> 5)) >> 10);
-					ph3 += ((fp_vibrato3 * (fp_freq3 >> 5)) >> 10);
-					ph4 += ((fp_vibrato4 * (fp_freq4 >> 5)) >> 10);
-				}
-			}
-
-			// amps
-			smoothamp1 = (63 * smoothamp1 + amp1) / 64;;
-			smoothamp2 = (63 * smoothamp2 + amp2) / 64;;
-			smoothamp3 = (63 * smoothamp3 + amp3) / 64;
-			smoothamp4 = (63 * smoothamp4 + amp4) /64;
-			if (vibratoDestination == VIBRATO_DESTINATION_AMP) {
-				int fp_vibrato1 = K32 - (((-vibratoTable[(vph1 >> 15) & WAVE_MASK] + K32) * fp_modVibratoAmp1) >> 16);
-				int fp_vibrato2 = K32 - (((-vibratoTable[(vph2 >> 15) & WAVE_MASK] + K32) * fp_modVibratoAmp2) >> 16);
-				int fp_vibrato3 = K32 - (((-vibratoTable[(vph3 >> 15) & WAVE_MASK] + K32) * fp_modVibratoAmp3) >> 16);
-				int fp_vibrato4 = K32 - (((-vibratoTable[(vph4 >> 15) & WAVE_MASK] + K32) * fp_modVibratoAmp4) >> 16);
-				smoothamp1 *= fp_vibrato1 / 32768.0f;
-				smoothamp2 *= fp_vibrato2 / 32768.0f;
-				smoothamp3 *= fp_vibrato3 / 32768.0f;
-				smoothamp4 *= fp_vibrato4 / 32768.0f;
-			}
-			if (vibrato2Destination == VIBRATO_DESTINATION_AMP) {
-				int fp_vibrato1 = K32 - (((-vibrato2Table[(v2ph1 >> 15) & WAVE_MASK] + K32) * fp_vibrato2Amp1) >> 16);
-				int fp_vibrato2 = K32 - (((-vibrato2Table[(v2ph2 >> 15) & WAVE_MASK] + K32) * fp_vibrato2Amp2) >> 16);
-				int fp_vibrato3 = K32 - (((-vibrato2Table[(v2ph3 >> 15) & WAVE_MASK] + K32) * fp_vibrato2Amp3) >> 16);
-				int fp_vibrato4 = K32 - (((-vibrato2Table[(v2ph4 >> 15) & WAVE_MASK] + K32) * fp_vibrato2Amp4) >> 16);
-				smoothamp1 *= fp_vibrato1 / 32768.0f;
-				smoothamp2 *= fp_vibrato2 / 32768.0f;
-				smoothamp3 *= fp_vibrato3 / 32768.0f;
-				smoothamp4 *= fp_vibrato4 / 32768.0f;
-			}
-
-			// filter amps
-			fp_smoothFilterAmp1 = (63 * fp_smoothFilterAmp1 + fp_filterAmp1) >> 6;
-			fp_smoothFilterAmp2 = (63 * fp_smoothFilterAmp2 + fp_filterAmp2) >> 6;
-			fp_smoothFilterAmp3 = (63 * fp_smoothFilterAmp3 + fp_filterAmp3) >> 6;
-			fp_smoothFilterAmp4 = (63 * fp_smoothFilterAmp4 + fp_filterAmp4) >> 6;
-			if (vibratoDestination == VIBRATO_DESTINATION_FILTER) {
-				int fp_vibrato1 = K32 - (((-vibratoTable[(vph1 >> 15) & WAVE_MASK] + K32) * fp_modVibratoAmp1) >> 15);
-				fp_vibrato1 = (fp_vibrato1 < 0) ? -fp_vibrato1 : fp_vibrato1;
-				int fp_vibrato2 = K32 - (((-vibratoTable[(vph2 >> 15) & WAVE_MASK] + K32) * fp_modVibratoAmp2) >> 15);
-				fp_vibrato2 = (fp_vibrato2 < 0) ? -fp_vibrato2 : fp_vibrato2;
-				int fp_vibrato3 = K32 - (((-vibratoTable[(vph3 >> 15) & WAVE_MASK] + K32) * fp_modVibratoAmp3) >> 15);
-				fp_vibrato3 = (fp_vibrato3 < 0) ? -fp_vibrato3 : fp_vibrato3;
-				int fp_vibrato4 = K32 - (((-vibratoTable[(vph4 >> 15) & WAVE_MASK] + K32) * fp_modVibratoAmp4) >> 15);
-				fp_vibrato4 = (fp_vibrato4 < 0) ? -fp_vibrato4 : fp_vibrato4;
-				fp_smoothFilterAmp1 = ((fp_smoothFilterAmp1 >> 10) * fp_vibrato1) >> 5;
-				fp_smoothFilterAmp2 = ((fp_smoothFilterAmp2 >> 10) * fp_vibrato2) >> 5;
-				fp_smoothFilterAmp3 = ((fp_smoothFilterAmp3 >> 10) * fp_vibrato3) >> 5;
-				fp_smoothFilterAmp4 = ((fp_smoothFilterAmp4 >> 10) * fp_vibrato4) >> 5;
-			}
-			if (vibrato2Destination == VIBRATO_DESTINATION_FILTER) {
-				int fp_vibrato1 = K32 - (((-vibrato2Table[(v2ph1 >> 15) & WAVE_MASK] + K32) * fp_vibrato2Amp1) >> 15);
-				fp_vibrato1 = (fp_vibrato1 < 0) ? -fp_vibrato1 : fp_vibrato1;
-				int fp_vibrato2 = K32 - (((-vibrato2Table[(v2ph2 >> 15) & WAVE_MASK] + K32) * fp_vibrato2Amp2) >> 15);
-				fp_vibrato2 = (fp_vibrato2 < 0) ? -fp_vibrato2 : fp_vibrato2;
-				int fp_vibrato3 = K32 - (((-vibrato2Table[(v2ph3 >> 15) & WAVE_MASK] + K32) * fp_vibrato2Amp3) >> 15);
-				fp_vibrato3 = (fp_vibrato3 < 0) ? -fp_vibrato3 : fp_vibrato3;
-				int fp_vibrato4 = K32 - (((-vibrato2Table[(v2ph4 >> 15) & WAVE_MASK] + K32) * fp_vibrato2Amp4) >> 15);
-				fp_vibrato4 = (fp_vibrato4 < 0) ? -fp_vibrato4 : fp_vibrato4;
-				fp_smoothFilterAmp1 = ((fp_smoothFilterAmp1 >> 10) * fp_vibrato1) >> 5;
-				fp_smoothFilterAmp2 = ((fp_smoothFilterAmp2 >> 10) * fp_vibrato2) >> 5;
-				fp_smoothFilterAmp3 = ((fp_smoothFilterAmp3 >> 10) * fp_vibrato3) >> 5;
-				fp_smoothFilterAmp4 = ((fp_smoothFilterAmp4 >> 10) * fp_vibrato4) >> 5;
-			}
-
-			float sample1, sample2, sample3, sample4;
-			if (mode == MODE_MONOPHONIC) {
-				sample1 = smoothamp1 * waveTable[fp_smoothFilterAmp1 >> 15][(ph1 >> 15) & WAVE_MASK] / 16768.0f;
-				sample2 = 0;
-				sample3 = 0;
-				sample4 = 0;
-			} else if (mode == MODE_POLYPHONIC) {
-				sample1 = smoothamp1 * waveTable[fp_smoothFilterAmp1 >> 15][(ph1 >> 15) & WAVE_MASK] / 16768.0f;
-				sample2 = smoothamp2 * waveTable[fp_smoothFilterAmp2 >> 15][(ph2 >> 15) & WAVE_MASK] / 16768.0f;
-				sample3 = smoothamp3 * waveTable[fp_smoothFilterAmp3 >> 15][(ph3 >> 15) & WAVE_MASK] / 16768.0f;
-				sample4 = smoothamp4 * waveTable[fp_smoothFilterAmp4 >> 15][(ph4 >> 15) & WAVE_MASK] / 16768.0f;
-			} else { // chorus
-				sample1 = smoothamp1 * waveTable[fp_smoothFilterAmp1 >> 15][(ph1 >> 15) & WAVE_MASK] / 32768.0f;
-				sample2 = smoothamp2 * waveTable[fp_smoothFilterAmp2 >> 15][(ph2 >> 15) & WAVE_MASK] / 32768.0f;
-				sample3 = smoothamp3 * waveTable[fp_smoothFilterAmp3 >> 15][(ph3 >> 15) & WAVE_MASK] / 32768.0f;
-				sample4 = smoothamp4 * waveTable[fp_smoothFilterAmp4 >> 15][(ph4 >> 15) & WAVE_MASK] / 32768.0f;
-			}
-
-			// clip
-			if (ampOverdrive > 0 && ampOverdrivePerVoice) {
-				sample1 = (float)Math.pow(sample1, ampOverdrive);
-				sample1 = range(sample2, -1.0f, 1.0f);
-				sample2 = (float)Math.pow(sample2, ampOverdrive);
-				sample2 = range(sample2, -1.0f, 1.0f);
-				sample3 = (float)Math.pow(sample3, ampOverdrive);
-				sample3 = range(sample3, -1.0f, 1.0f);
-				sample4 = (float)Math.pow(sample4, ampOverdrive);
-				sample4 = range(sample4, -1.0f, 1.0f);
-			}
-			float sample = sample1 + sample2 + sample3 + sample4;
-			if (ampOverdrive > 0 && !ampOverdrivePerVoice) {
-				sample = (float)Math.pow(sample, ampOverdrive);
-				sample = range(sample, -1.0f, 1.0f);
-			}
-
-			// adjust the volume based on the echo?
-			//sample = sample * (K16 - (fp_echoAmount >> 3) - (fp_echoDelay >> 3)) >> 14;
-
-			float sampleLeft = sample;
-			float sampleRight = sample;
-
-			// Echo/flange effect
-			flangeIndex += fp_flangeRate;
-			int fp_flangingEchoDelay = fp_echoDelay + ((fp_flangeAmount * flangeWave[(flangeIndex >> 11) & 0xFF]) >> 9);
-			echoIndex++;
-			echoIndex %= sampleRate;
-			echoTable[echoIndex] = sample;
-			int delayIndexLeft = echoIndex - (fp_flangingEchoDelay >> 1);
-			delayIndexLeft = (delayIndexLeft + sampleRate) % sampleRate;
-			sampleLeft += echoAmount * echoTable[delayIndexLeft];
-			int delayIndexRight = echoIndex - (fp_flangingEchoDelay);
-			delayIndexRight = (delayIndexRight + sampleRate) % sampleRate;
-			sampleRight += echoAmount * echoTable[delayIndexRight];
-			echoTable[echoIndex] += echoFeedback * echoTable[delayIndexRight];
-
-			// Clip in range
-			sampleLeft = sampleLeft <= -K32 ? -K32 + 1 : (sampleLeft > K32 ? K32 : sampleLeft);
-			sampleRight = sampleRight <= -K32 ? -K32 + 1 : (sampleRight > K32 ? K32 : sampleRight);
-
-			output[0] =  sampleLeft;
-			output[1] = sampleRight;
-
-			if (t >= envelopeSampleRate) {
-				t = 0;
-
-				// sequencer
-				if (sequencerRunning) {
-					float lastSequenceIndex = sequenceIndex;
-					sequenceIndex += sequenceRate / ENVELOPE_RATE / 60.0f;
-					if (sequenceIndex >= SEQUENCE_LENGTH) {
-						sequenceIndex = sequenceIndex - SEQUENCE_LENGTH;
-					}
-					if ((int) lastSequenceIndex != (int) sequenceIndex) {
-						sequenceNote = sequence[(int) sequenceIndex];
-						if (sequenceNote != 0) {
-							if (mode == MODE_MONOPHONIC) {
-								internalKeyPress(1, sequencerBaseNote, 1.0f, false, true, 0);
-							} else if (mode == MODE_CHORUS) {
-								internalKeyPress(1, sequencerBaseNote, 1.0f, false, true, -0.07f * chorusWidth);
-								internalKeyPress(2, sequencerBaseNote, 1.0f, false, true, -0.03f * chorusWidth);
-								internalKeyPress(3, sequencerBaseNote, 1.0f, false, true, +0.05f * chorusWidth);
-								internalKeyPress(4, sequencerBaseNote, 1.0f, false, true, +0.11f * chorusWidth);
-							} else {
-								internalKeyPress(internalGetVoice(sequencerBaseNote + sequenceNote - 5), sequencerBaseNote, 1.0f, false, true, 0);
-							}
+				if ((int) lastSequenceIndex != (int) sequenceIndex) {
+					sequenceNote = sequence[(int) sequenceIndex];
+					if (sequenceNote != 0) {
+						if (mode == MODE_MONOPHONIC) {
+							internalKeyPress(1, sequencerBaseNote, 1.0f, false, true, 0);
+						} else if (mode == MODE_CHORUS) {
+							internalKeyPress(1, sequencerBaseNote, 1.0f, false, true, -0.07f * chorusWidth);
+							internalKeyPress(2, sequencerBaseNote, 1.0f, false, true, -0.03f * chorusWidth);
+							internalKeyPress(3, sequencerBaseNote, 1.0f, false, true, +0.05f * chorusWidth);
+							internalKeyPress(4, sequencerBaseNote, 1.0f, false, true, +0.11f * chorusWidth);
 						} else {
-							internalKeyRelease(1);
-							internalKeyRelease(2);
-							internalKeyRelease(3);
-							internalKeyRelease(4);
-						}
-						if (!sequenceLoop && ((int) sequenceIndex) == SEQUENCE_LENGTH - 1) {
-							sequencerRunning = false;
-							internalKeyRelease(1);
-							internalKeyRelease(2);
-							internalKeyRelease(3);
-							internalKeyRelease(4);
-						}
-					}
-				}
-
-				float fp_ampAttack = 0.25f / (ampAttack + 0.1f);
-				float fp_ampDecay = 0.25f / (ampDecay + 0.1f);
-				float fp_ampRelease = 0.25f / (ampRelease + 0.1f);
-				float fp_filterAttack = 0.25f / (filterEnvAttack + 0.1f);
-				float fp_filterDecay = 0.25f / (filterEnvDecay + 0.1f);
-				float fp_filterRelease = 0.25f / (filterEnvRelease + 0.1f);
-				float fp_vibratoAttack = 0.25f / (vibratoAttack + 0.1f);
-				float fp_vibratoDecay = 0.25f / (vibratoDecay + 0.1f);
-				float fp_vibrato2Attack = 0.25f / (vibrato2Attack + 0.1f);
-				float fp_vibrato2Decay = 0.25f / (vibrato2Decay + 0.1f);
-
-				sBend = (sBend * 7 + bend) / 8;
-				sVolumeExpression = (sVolumeExpression * 7 + volumeExpression) / 8;
-				sFilterExpression = (sFilterExpression * 7 + filterExpression) / 8;
-
-				if (sequenceRate > 0) {
-					if (sequenceNote > 0) {
-						noteFrequency1 = noteToFrequency(note1 + sequenceNote - 5, key, detune1, sBend);
-						noteFrequency2 = noteToFrequency(note2 + sequenceNote - 5, key, detune2, sBend);
-						noteFrequency3 = noteToFrequency(note3 + sequenceNote - 5, key, detune3, sBend);
-						noteFrequency4 = noteToFrequency(note4 + sequenceNote - 5, key, detune4, sBend);
-					}
-				} else {
-					noteFrequency1 = noteToFrequency(note1, key, detune1, sBend);
-					noteFrequency2 = noteToFrequency(note2, key, detune2, sBend);
-					noteFrequency3 = noteToFrequency(note3, key, detune3, sBend);
-					noteFrequency4 = noteToFrequency(note4, key, detune4, sBend);
-				}
-
-				// key 1
-				if (gliding1) {
-					frequency1 = frequency1 * portamentoAmount + noteFrequency1 * (1.0f - portamentoAmount);
-				} else {
-					frequency1 = noteFrequency1;
-				}
-				fp_freq1 = (int) (waveSizeDivSampleRate * frequency1 * K32);
-				// amp env 1
-				if (keyDown1) {
-					if (ampAttacking1) {
-						amplitude1 = Math.min(1, amplitude1 + fp_ampAttack);
-						if (amplitude1 >= 1) {
-							ampAttacking1 = false;
+							internalKeyPress(internalGetVoice(sequencerBaseNote + sequenceNote - 5), sequencerBaseNote, 1.0f, false, true, 0);
 						}
 					} else {
-						amplitude1 = Math.max(ampSustain, amplitude1 - fp_ampDecay);
+						internalKeyRelease(1);
+						internalKeyRelease(2);
+						internalKeyRelease(3);
+						internalKeyRelease(4);
+					}
+					if (!sequenceLoop && ((int) sequenceIndex) == SEQUENCE_LENGTH - 1) {
+						sequencerRunning = false;
+						internalKeyRelease(1);
+						internalKeyRelease(2);
+						internalKeyRelease(3);
+						internalKeyRelease(4);
+					}
+				}
+			}
+
+			float fp_ampAttack = 0.25f / (ampAttack + 0.1f);
+			float fp_ampDecay = 0.25f / (ampDecay + 0.1f);
+			float fp_ampRelease = 0.25f / (ampRelease + 0.1f);
+			float fp_filterAttack = 0.25f / (filterEnvAttack + 0.1f);
+			float fp_filterDecay = 0.25f / (filterEnvDecay + 0.1f);
+			float fp_filterRelease = 0.25f / (filterEnvRelease + 0.1f);
+			float fp_vibratoAttack = 0.25f / (vibratoAttack + 0.1f);
+			float fp_vibratoDecay = 0.25f / (vibratoDecay + 0.1f);
+			float fp_vibrato2Attack = 0.25f / (vibrato2Attack + 0.1f);
+			float fp_vibrato2Decay = 0.25f / (vibrato2Decay + 0.1f);
+
+			sBend = (sBend * 7 + bend) / 8;
+			sVolumeExpression = (sVolumeExpression * 7 + volumeExpression) / 8;
+			sFilterExpression = (sFilterExpression * 7 + filterExpression) / 8;
+
+			if (sequenceRate > 0) {
+				if (sequenceNote > 0) {
+					noteFrequency1 = noteToFrequency(note1 + sequenceNote - 5, key, detune1, sBend);
+					noteFrequency2 = noteToFrequency(note2 + sequenceNote - 5, key, detune2, sBend);
+					noteFrequency3 = noteToFrequency(note3 + sequenceNote - 5, key, detune3, sBend);
+					noteFrequency4 = noteToFrequency(note4 + sequenceNote - 5, key, detune4, sBend);
+				}
+			} else {
+				noteFrequency1 = noteToFrequency(note1, key, detune1, sBend);
+				noteFrequency2 = noteToFrequency(note2, key, detune2, sBend);
+				noteFrequency3 = noteToFrequency(note3, key, detune3, sBend);
+				noteFrequency4 = noteToFrequency(note4, key, detune4, sBend);
+			}
+
+			// key 1
+			if (gliding1) {
+				frequency1 = frequency1 * portamentoAmount + noteFrequency1 * (1.0f - portamentoAmount);
+			} else {
+				frequency1 = noteFrequency1;
+			}
+			fp_freq1 = (int) (waveSizeDivSampleRate * frequency1 * K32);
+			// amp env 1
+			if (keyDown1) {
+				if (ampAttacking1) {
+					amplitude1 = Math.min(1, amplitude1 + fp_ampAttack);
+					if (amplitude1 >= 1) {
+						ampAttacking1 = false;
 					}
 				} else {
-					amplitude1 = Math.max(0, amplitude1 - fp_ampRelease);
+					amplitude1 = Math.max(ampSustain, amplitude1 - fp_ampDecay);
 				}
-				amp1 = ampVolume * amplitude1 * amplitude1 * amplitude1 / (1.0f + echoAmount) * 96 / (96 + 12 * octave + +key + note1) * velocity1 * sVolumeExpression;
-				//filter env1
-				if (keyDown1) {
-					if (filterAttacking1) {
-						filterEnvAmplitude1 = Math.min(1, filterEnvAmplitude1 + fp_filterAttack);
-						if (filterEnvAmplitude1 >= 1) {
-							filterAttacking1 = false;
-						}
-					} else {
-						filterEnvAmplitude1 = Math.max(filterEnvSustain, filterEnvAmplitude1 - fp_filterDecay);
+			} else {
+				amplitude1 = Math.max(0, amplitude1 - fp_ampRelease);
+			}
+			amp1 = ampVolume * amplitude1 * amplitude1 * amplitude1 / (1.0f + echoAmount) * 96 / (96 + 12 * octave + +key + note1) * velocity1 * sVolumeExpression;
+			//filter env1
+			if (keyDown1) {
+				if (filterAttacking1) {
+					filterEnvAmplitude1 = Math.min(1, filterEnvAmplitude1 + fp_filterAttack);
+					if (filterEnvAmplitude1 >= 1) {
+						filterAttacking1 = false;
 					}
 				} else {
-					filterEnvAmplitude1 = Math.max(0, filterEnvAmplitude1 - fp_filterRelease);
+					filterEnvAmplitude1 = Math.max(filterEnvSustain, filterEnvAmplitude1 - fp_filterDecay);
 				}
+			} else {
+				filterEnvAmplitude1 = Math.max(0, filterEnvAmplitude1 - fp_filterRelease);
+			}
 //							if (filterFixed) {
 //								float freqAdjust = (frequency1 - 32 * C0) / (32 * C0) / 8;
 //								filterEnvAmplitude1 -= freqAdjust;
 //							}
-				filterAmplitude1 = range(filterLow + filterEnvAmplitude1 * filterHigh * filterVelocity1 + sFilterExpression, 0, 0.99f);
-				fp_filterAmp1 = (int) (TABLE_SIZE * filterAmplitude1 * K32);
-				// vib env 1
-				if (keyDown1) {
-					if (vibratoAttacking1) {
-						vibratoAmplitude1 = Math.min(1, vibratoAmplitude1 + fp_vibratoAttack);
-						if (vibratoAmplitude1 >= 1) {
-							vibratoAttacking1 = false;
-						}
-					} else {
-						vibratoAmplitude1 = Math.max(0, vibratoAmplitude1 - fp_vibratoDecay);
+			filterAmplitude1 = range(filterLow + filterEnvAmplitude1 * filterHigh * filterVelocity1 + sFilterExpression, 0, 0.99f);
+			fp_filterAmp1 = (int) (TABLE_SIZE * filterAmplitude1 * K32);
+			// vib env 1
+			if (keyDown1) {
+				if (vibratoAttacking1) {
+					vibratoAmplitude1 = Math.min(1, vibratoAmplitude1 + fp_vibratoAttack);
+					if (vibratoAmplitude1 >= 1) {
+						vibratoAttacking1 = false;
 					}
 				} else {
 					vibratoAmplitude1 = Math.max(0, vibratoAmplitude1 - fp_vibratoDecay);
 				}
-				fp_vibratoAmp1 = (int) ((vibratoAmplitude1 * vibratoAmount + vibratoExpression) * K32);
-				// vib2 env 1
-				if (keyDown1) {
-					if (vibrato2Attacking1) {
-						vibrato2Amplitude1 = Math.min(1, vibrato2Amplitude1 + fp_vibrato2Attack);
-						if (vibrato2Amplitude1 >= 1) {
-							vibrato2Attacking1 = false;
-						}
-					} else {
-						vibrato2Amplitude1 = Math.max(0, vibrato2Amplitude1 - fp_vibrato2Decay);
+			} else {
+				vibratoAmplitude1 = Math.max(0, vibratoAmplitude1 - fp_vibratoDecay);
+			}
+			fp_vibratoAmp1 = (int) ((vibratoAmplitude1 * vibratoAmount + vibratoExpression) * K32);
+			// vib2 env 1
+			if (keyDown1) {
+				if (vibrato2Attacking1) {
+					vibrato2Amplitude1 = Math.min(1, vibrato2Amplitude1 + fp_vibrato2Attack);
+					if (vibrato2Amplitude1 >= 1) {
+						vibrato2Attacking1 = false;
 					}
 				} else {
 					vibrato2Amplitude1 = Math.max(0, vibrato2Amplitude1 - fp_vibrato2Decay);
 				}
-				fp_vibrato2Amp1 = (int) ((vibrato2Amplitude1 * vibrato2Amount + vibrato2Expression) * K32);
-				if (releaseKey1) {
-					keyDown1 = false;
-					releaseKey1 = false;
-				}
+			} else {
+				vibrato2Amplitude1 = Math.max(0, vibrato2Amplitude1 - fp_vibrato2Decay);
+			}
+			fp_vibrato2Amp1 = (int) ((vibrato2Amplitude1 * vibrato2Amount + vibrato2Expression) * K32);
+			if (releaseKey1) {
+				keyDown1 = false;
+				releaseKey1 = false;
+			}
 
-				// key 2
-				if (gliding2) {
-					frequency2 = frequency2 * portamentoAmount + noteFrequency2 * (1.0f - portamentoAmount);
-				} else {
-					frequency2 = noteFrequency2;
-				}
-				fp_freq2 = (int) (waveSizeDivSampleRate * frequency2 * K32);
-				if (keyDown2) {
-					if (ampAttacking2) {
-						amplitude2 = Math.min(1, amplitude2 + fp_ampAttack);
-						if (amplitude2 >= 1) {
-							ampAttacking2 = false;
-						}
-					} else {
-						amplitude2 = Math.max(ampSustain, amplitude2 - fp_ampDecay);
+			// key 2
+			if (gliding2) {
+				frequency2 = frequency2 * portamentoAmount + noteFrequency2 * (1.0f - portamentoAmount);
+			} else {
+				frequency2 = noteFrequency2;
+			}
+			fp_freq2 = (int) (waveSizeDivSampleRate * frequency2 * K32);
+			if (keyDown2) {
+				if (ampAttacking2) {
+					amplitude2 = Math.min(1, amplitude2 + fp_ampAttack);
+					if (amplitude2 >= 1) {
+						ampAttacking2 = false;
 					}
 				} else {
-					amplitude2 = Math.max(0, amplitude2 - fp_ampRelease);
+					amplitude2 = Math.max(ampSustain, amplitude2 - fp_ampDecay);
 				}
-				amp2 = ampVolume * amplitude2 * amplitude2 * amplitude2 / (1.0f + echoAmount) * 96 / (96 + 12 * octave + key + note2) * velocity2 * sVolumeExpression;
-				if (keyDown2) {
-					if (filterAttacking2) {
-						filterEnvAmplitude2 = Math.min(1, filterEnvAmplitude2 + fp_filterAttack);
-						if (filterEnvAmplitude2 >= 1) {
-							filterAttacking2 = false;
-						}
-					} else {
-						filterEnvAmplitude2 = Math.max(filterEnvSustain, filterEnvAmplitude2 - fp_filterDecay);
+			} else {
+				amplitude2 = Math.max(0, amplitude2 - fp_ampRelease);
+			}
+			amp2 = ampVolume * amplitude2 * amplitude2 * amplitude2 / (1.0f + echoAmount) * 96 / (96 + 12 * octave + key + note2) * velocity2 * sVolumeExpression;
+			if (keyDown2) {
+				if (filterAttacking2) {
+					filterEnvAmplitude2 = Math.min(1, filterEnvAmplitude2 + fp_filterAttack);
+					if (filterEnvAmplitude2 >= 1) {
+						filterAttacking2 = false;
 					}
 				} else {
-					filterEnvAmplitude2 = Math.max(0, filterEnvAmplitude2 - fp_filterRelease);
+					filterEnvAmplitude2 = Math.max(filterEnvSustain, filterEnvAmplitude2 - fp_filterDecay);
 				}
-				filterAmplitude2 = range(filterLow + filterEnvAmplitude2 * filterHigh * filterVelocity2 + sFilterExpression, 0, 0.99f);
-				fp_filterAmp2 = (int) (TABLE_SIZE * filterAmplitude2 * K32);
-				// vib env 2
-				if (keyDown2) {
-					if (vibratoAttacking2) {
-						vibratoAmplitude2 = Math.min(1, vibratoAmplitude2 + fp_vibratoAttack);
-						if (vibratoAmplitude2 >= 1) {
-							vibratoAttacking2 = false;
-						}
-					} else {
-						vibratoAmplitude2 = Math.max(0, vibratoAmplitude2 - fp_vibratoDecay);
+			} else {
+				filterEnvAmplitude2 = Math.max(0, filterEnvAmplitude2 - fp_filterRelease);
+			}
+			filterAmplitude2 = range(filterLow + filterEnvAmplitude2 * filterHigh * filterVelocity2 + sFilterExpression, 0, 0.99f);
+			fp_filterAmp2 = (int) (TABLE_SIZE * filterAmplitude2 * K32);
+			// vib env 2
+			if (keyDown2) {
+				if (vibratoAttacking2) {
+					vibratoAmplitude2 = Math.min(1, vibratoAmplitude2 + fp_vibratoAttack);
+					if (vibratoAmplitude2 >= 1) {
+						vibratoAttacking2 = false;
 					}
 				} else {
 					vibratoAmplitude2 = Math.max(0, vibratoAmplitude2 - fp_vibratoDecay);
 				}
-				fp_vibratoAmp2 = (int) ((vibratoAmplitude2 * vibratoAmount + vibratoExpression) * K32);
-				// vib2 env 2
-				if (keyDown2) {
-					if (vibrato2Attacking2) {
-						vibrato2Amplitude2 = Math.min(1, vibrato2Amplitude2 + fp_vibrato2Attack);
-						if (vibrato2Amplitude2 >= 1) {
-							vibrato2Attacking2 = false;
-						}
-					} else {
-						vibrato2Amplitude2 = Math.max(0, vibrato2Amplitude2 - fp_vibrato2Decay);
+			} else {
+				vibratoAmplitude2 = Math.max(0, vibratoAmplitude2 - fp_vibratoDecay);
+			}
+			fp_vibratoAmp2 = (int) ((vibratoAmplitude2 * vibratoAmount + vibratoExpression) * K32);
+			// vib2 env 2
+			if (keyDown2) {
+				if (vibrato2Attacking2) {
+					vibrato2Amplitude2 = Math.min(1, vibrato2Amplitude2 + fp_vibrato2Attack);
+					if (vibrato2Amplitude2 >= 1) {
+						vibrato2Attacking2 = false;
 					}
 				} else {
 					vibrato2Amplitude2 = Math.max(0, vibrato2Amplitude2 - fp_vibrato2Decay);
 				}
-				fp_vibrato2Amp2 = (int) ((vibrato2Amplitude2 * vibrato2Amount + vibrato2Expression) * K32);
-				if (releaseKey2) {
-					keyDown2 = false;
-					releaseKey2 = false;
-				}
+			} else {
+				vibrato2Amplitude2 = Math.max(0, vibrato2Amplitude2 - fp_vibrato2Decay);
+			}
+			fp_vibrato2Amp2 = (int) ((vibrato2Amplitude2 * vibrato2Amount + vibrato2Expression) * K32);
+			if (releaseKey2) {
+				keyDown2 = false;
+				releaseKey2 = false;
+			}
 
-				// key 3
-				if (gliding3) {
-					frequency3 = frequency3 * portamentoAmount + noteFrequency3 * (1.0f - portamentoAmount);
-				} else {
-					frequency3 = noteFrequency3;
-				}
-				fp_freq3 = (int) (waveSizeDivSampleRate * frequency3 * K32);
-				if (keyDown3) {
-					if (ampAttacking3) {
-						amplitude3 = Math.min(1, amplitude3 + fp_ampAttack);
-						if (amplitude3 >= 1) {
-							ampAttacking3 = false;
-						}
-					} else {
-						amplitude3 = Math.max(ampSustain, amplitude3 - fp_ampDecay);
+			// key 3
+			if (gliding3) {
+				frequency3 = frequency3 * portamentoAmount + noteFrequency3 * (1.0f - portamentoAmount);
+			} else {
+				frequency3 = noteFrequency3;
+			}
+			fp_freq3 = (int) (waveSizeDivSampleRate * frequency3 * K32);
+			if (keyDown3) {
+				if (ampAttacking3) {
+					amplitude3 = Math.min(1, amplitude3 + fp_ampAttack);
+					if (amplitude3 >= 1) {
+						ampAttacking3 = false;
 					}
 				} else {
-					amplitude3 = Math.max(0, amplitude3 - fp_ampRelease);
+					amplitude3 = Math.max(ampSustain, amplitude3 - fp_ampDecay);
 				}
-				amp3 = ampVolume * amplitude3 * amplitude3 * amplitude3 / (1.0f + echoAmount) * 96 / (96 + 12 * octave + key + note3) * velocity3 * sVolumeExpression;
-				if (keyDown3) {
-					if (filterAttacking3) {
-						filterEnvAmplitude3 = Math.min(1, filterEnvAmplitude3 + fp_filterAttack);
-						if (filterEnvAmplitude3 >= 1) {
-							filterAttacking3 = false;
-						}
-					} else {
-						filterEnvAmplitude3 = Math.max(filterEnvSustain, filterEnvAmplitude3 - fp_filterDecay);
+			} else {
+				amplitude3 = Math.max(0, amplitude3 - fp_ampRelease);
+			}
+			amp3 = ampVolume * amplitude3 * amplitude3 * amplitude3 / (1.0f + echoAmount) * 96 / (96 + 12 * octave + key + note3) * velocity3 * sVolumeExpression;
+			if (keyDown3) {
+				if (filterAttacking3) {
+					filterEnvAmplitude3 = Math.min(1, filterEnvAmplitude3 + fp_filterAttack);
+					if (filterEnvAmplitude3 >= 1) {
+						filterAttacking3 = false;
 					}
 				} else {
-					filterEnvAmplitude3 = Math.max(0, filterEnvAmplitude3 - fp_filterRelease);
+					filterEnvAmplitude3 = Math.max(filterEnvSustain, filterEnvAmplitude3 - fp_filterDecay);
 				}
-				filterAmplitude3 = range(filterLow + filterEnvAmplitude3 * filterHigh * filterVelocity3 + sFilterExpression, 0, 0.99f);
-				fp_filterAmp3 = (int) (TABLE_SIZE * filterAmplitude3 * K32);
-				// vib env 3
-				if (keyDown3) {
-					if (vibratoAttacking3) {
-						vibratoAmplitude3 = Math.min(1, vibratoAmplitude3 + fp_vibratoAttack);
-						if (vibratoAmplitude3 >= 1) {
-							vibratoAttacking3 = false;
-						}
-					} else {
-						vibratoAmplitude3 = Math.max(0, vibratoAmplitude3 - fp_vibratoDecay);
+			} else {
+				filterEnvAmplitude3 = Math.max(0, filterEnvAmplitude3 - fp_filterRelease);
+			}
+			filterAmplitude3 = range(filterLow + filterEnvAmplitude3 * filterHigh * filterVelocity3 + sFilterExpression, 0, 0.99f);
+			fp_filterAmp3 = (int) (TABLE_SIZE * filterAmplitude3 * K32);
+			// vib env 3
+			if (keyDown3) {
+				if (vibratoAttacking3) {
+					vibratoAmplitude3 = Math.min(1, vibratoAmplitude3 + fp_vibratoAttack);
+					if (vibratoAmplitude3 >= 1) {
+						vibratoAttacking3 = false;
 					}
 				} else {
 					vibratoAmplitude3 = Math.max(0, vibratoAmplitude3 - fp_vibratoDecay);
 				}
-				fp_vibratoAmp3 = (int) ((vibratoAmplitude3 * vibratoAmount + vibratoExpression) * K32);
-				// vib2 env 3
-				if (keyDown3) {
-					if (vibrato2Attacking3) {
-						vibrato2Amplitude3 = Math.min(1, vibrato2Amplitude3 + fp_vibrato2Attack);
-						if (vibrato2Amplitude3 >= 1) {
-							vibrato2Attacking3 = false;
-						}
-					} else {
-						vibrato2Amplitude3 = Math.max(0, vibrato2Amplitude3 - fp_vibrato2Decay);
+			} else {
+				vibratoAmplitude3 = Math.max(0, vibratoAmplitude3 - fp_vibratoDecay);
+			}
+			fp_vibratoAmp3 = (int) ((vibratoAmplitude3 * vibratoAmount + vibratoExpression) * K32);
+			// vib2 env 3
+			if (keyDown3) {
+				if (vibrato2Attacking3) {
+					vibrato2Amplitude3 = Math.min(1, vibrato2Amplitude3 + fp_vibrato2Attack);
+					if (vibrato2Amplitude3 >= 1) {
+						vibrato2Attacking3 = false;
 					}
 				} else {
 					vibrato2Amplitude3 = Math.max(0, vibrato2Amplitude3 - fp_vibrato2Decay);
 				}
-				fp_vibrato2Amp3 = (int) ((vibrato2Amplitude3 * vibrato2Amount + vibrato2Expression) * K32);
-				if (releaseKey3) {
-					keyDown3 = false;
-					releaseKey3 = false;
-				}
+			} else {
+				vibrato2Amplitude3 = Math.max(0, vibrato2Amplitude3 - fp_vibrato2Decay);
+			}
+			fp_vibrato2Amp3 = (int) ((vibrato2Amplitude3 * vibrato2Amount + vibrato2Expression) * K32);
+			if (releaseKey3) {
+				keyDown3 = false;
+				releaseKey3 = false;
+			}
 
-				// key 4
-				if (gliding4) {
-					frequency4 = frequency4 * portamentoAmount + noteFrequency4 * (1.0f - portamentoAmount);
-				} else {
-					frequency4 = noteFrequency4;
-				}
-				fp_freq4 = (int) (waveSizeDivSampleRate * frequency4 * K32);
-				if (keyDown4) {
-					if (ampAttacking4) {
-						amplitude4 = Math.min(1, amplitude4 + fp_ampAttack);
-						if (amplitude4 >= 1) {
-							ampAttacking4 = false;
-						}
-					} else {
-						amplitude4 = Math.max(ampSustain, amplitude4 - fp_ampDecay);
+			// key 4
+			if (gliding4) {
+				frequency4 = frequency4 * portamentoAmount + noteFrequency4 * (1.0f - portamentoAmount);
+			} else {
+				frequency4 = noteFrequency4;
+			}
+			fp_freq4 = (int) (waveSizeDivSampleRate * frequency4 * K32);
+			if (keyDown4) {
+				if (ampAttacking4) {
+					amplitude4 = Math.min(1, amplitude4 + fp_ampAttack);
+					if (amplitude4 >= 1) {
+						ampAttacking4 = false;
 					}
 				} else {
-					amplitude4 = Math.max(0, amplitude4 - fp_ampRelease);
+					amplitude4 = Math.max(ampSustain, amplitude4 - fp_ampDecay);
 				}
-				amp4 = ampVolume * amplitude4 * amplitude4 * amplitude4 / (1.0f + echoAmount) * 96 / (96 + 12 * octave + key + note4) * velocity4 * sVolumeExpression;
-				if (keyDown4) {
-					if (filterAttacking4) {
-						filterEnvAmplitude4 = Math.min(1, filterEnvAmplitude4 + fp_filterAttack);
-						if (filterEnvAmplitude4 >= 1) {
-							filterAttacking4 = false;
-						}
-					} else {
-						filterEnvAmplitude4 = Math.max(filterEnvSustain, filterEnvAmplitude4 - fp_filterDecay);
+			} else {
+				amplitude4 = Math.max(0, amplitude4 - fp_ampRelease);
+			}
+			amp4 = ampVolume * amplitude4 * amplitude4 * amplitude4 / (1.0f + echoAmount) * 96 / (96 + 12 * octave + key + note4) * velocity4 * sVolumeExpression;
+			if (keyDown4) {
+				if (filterAttacking4) {
+					filterEnvAmplitude4 = Math.min(1, filterEnvAmplitude4 + fp_filterAttack);
+					if (filterEnvAmplitude4 >= 1) {
+						filterAttacking4 = false;
 					}
 				} else {
-					filterEnvAmplitude4 = Math.max(0, filterEnvAmplitude4 - fp_filterRelease);
+					filterEnvAmplitude4 = Math.max(filterEnvSustain, filterEnvAmplitude4 - fp_filterDecay);
 				}
-				filterAmplitude4 = range(filterLow + filterEnvAmplitude4 * filterHigh * filterVelocity4 + sFilterExpression, 0, 0.99f);
-				fp_filterAmp4 = (int) (TABLE_SIZE * filterAmplitude4 * K32);
-				// vib env 4
-				if (keyDown4) {
-					if (vibratoAttacking4) {
-						vibratoAmplitude4 = Math.min(1, vibratoAmplitude4 + fp_vibratoAttack);
-						if (vibratoAmplitude4 >= 1) {
-							vibratoAttacking4 = false;
-						}
-					} else {
-						vibratoAmplitude4 = Math.max(0, vibratoAmplitude4 - fp_vibratoDecay);
+			} else {
+				filterEnvAmplitude4 = Math.max(0, filterEnvAmplitude4 - fp_filterRelease);
+			}
+			filterAmplitude4 = range(filterLow + filterEnvAmplitude4 * filterHigh * filterVelocity4 + sFilterExpression, 0, 0.99f);
+			fp_filterAmp4 = (int) (TABLE_SIZE * filterAmplitude4 * K32);
+			// vib env 4
+			if (keyDown4) {
+				if (vibratoAttacking4) {
+					vibratoAmplitude4 = Math.min(1, vibratoAmplitude4 + fp_vibratoAttack);
+					if (vibratoAmplitude4 >= 1) {
+						vibratoAttacking4 = false;
 					}
 				} else {
 					vibratoAmplitude4 = Math.max(0, vibratoAmplitude4 - fp_vibratoDecay);
 				}
-				fp_vibratoAmp4 = (int) ((vibratoAmplitude4 * vibratoAmount + vibratoExpression) * K32);
-				// vib2 env 4
-				if (keyDown4) {
-					if (vibrato2Attacking4) {
-						vibrato2Amplitude4 = Math.min(1, vibrato2Amplitude4 + fp_vibrato2Attack);
-						if (vibrato2Amplitude4 >= 1) {
-							vibrato2Attacking4 = false;
-						}
-					} else {
-						vibrato2Amplitude4 = Math.max(0, vibrato2Amplitude4 - fp_vibrato2Decay);
+			} else {
+				vibratoAmplitude4 = Math.max(0, vibratoAmplitude4 - fp_vibratoDecay);
+			}
+			fp_vibratoAmp4 = (int) ((vibratoAmplitude4 * vibratoAmount + vibratoExpression) * K32);
+			// vib2 env 4
+			if (keyDown4) {
+				if (vibrato2Attacking4) {
+					vibrato2Amplitude4 = Math.min(1, vibrato2Amplitude4 + fp_vibrato2Attack);
+					if (vibrato2Amplitude4 >= 1) {
+						vibrato2Attacking4 = false;
 					}
 				} else {
 					vibrato2Amplitude4 = Math.max(0, vibrato2Amplitude4 - fp_vibrato2Decay);
 				}
-				fp_vibrato2Amp4 = (int) ((vibrato2Amplitude4 * vibrato2Amount + vibrato2Expression) * K32);
-				if (releaseKey4) {
-					keyDown4 = false;
-					releaseKey4 = false;
-				}
-
-				if (vibratoType == VIBRATO_TYPE_NOISE) {
-					fp_vibratoRate = (int) (waveSizeDivSampleRate * vibratoRate * K32 / 100);
-				} else {
-					fp_vibratoRate = (int) (waveSizeDivSampleRate * vibratoRate * K32);
-				}
-				if (vibrato2Type == VIBRATO_TYPE_NOISE) {
-					fp_vibrato2Rate = (int) (waveSizeDivSampleRate * vibrato2Rate * K32 / 100);
-				} else {
-					fp_vibrato2Rate = (int) (waveSizeDivSampleRate * vibrato2Rate * K32);
-				}
-
-				fp_echoDelay = (int) (echoDelay * sampleRate);
-				fp_flangeRate = (int) (flangeRate * 256);
-				fp_flangeAmount = (int) (flangeAmount * 256);
-
+			} else {
+				vibrato2Amplitude4 = Math.max(0, vibrato2Amplitude4 - fp_vibrato2Decay);
+			}
+			fp_vibrato2Amp4 = (int) ((vibrato2Amplitude4 * vibrato2Amount + vibrato2Expression) * K32);
+			if (releaseKey4) {
+				keyDown4 = false;
+				releaseKey4 = false;
 			}
 
-//		}
+			if (vibratoType == VIBRATO_TYPE_NOISE) {
+				fp_vibratoRate = (int) (waveSizeDivSampleRate * vibratoRate * K32 / 100);
+			} else {
+				fp_vibratoRate = (int) (waveSizeDivSampleRate * vibratoRate * K32);
+			}
+			if (vibrato2Type == VIBRATO_TYPE_NOISE) {
+				fp_vibrato2Rate = (int) (waveSizeDivSampleRate * vibrato2Rate * K32 / 100);
+			} else {
+				fp_vibrato2Rate = (int) (waveSizeDivSampleRate * vibrato2Rate * K32);
+			}
+
+			fp_echoDelay = (int) (echoDelay * sampleRate);
+			fp_flangeRate = (int) (flangeRate * 256);
+			fp_flangeAmount = (int) (flangeAmount * 256);
+
+		}
 	}
 
 	float range(float v, float x, float y) {
