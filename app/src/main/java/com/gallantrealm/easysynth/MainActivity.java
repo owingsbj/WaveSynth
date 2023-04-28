@@ -19,6 +19,7 @@ import com.gallantrealm.easysynth.theme.TropicalTheme;
 import com.gallantrealm.easysynth.theme.WoodTheme;
 import com.gallantrealm.android.InputDialog;
 import com.gallantrealm.android.MessageDialog;
+import com.gallantrealm.mysynth.MySynthMidi;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
@@ -59,7 +60,7 @@ import android.widget.Toast;
 
 //import com.newrelic.agent.android.NewRelic;
 
-public class MainActivity extends Activity implements OnTouchListener, OnSeekBarChangeListener, OnCheckedChangeListener, View.OnClickListener {
+public class MainActivity extends Activity implements OnTouchListener, OnSeekBarChangeListener, OnCheckedChangeListener, View.OnClickListener, MySynthMidi.Callbacks {
 
 	public ClientModel clientModel = ClientModel.getClientModel();
 
@@ -268,7 +269,7 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 
 		clientModel.loadPreferences(this);
 
-		synth = new WaveSynth(this);
+		synth = new WaveSynth(this, this);
 
 		this.setVolumeControlStream(AudioManager.STREAM_MUSIC);
 
@@ -2514,49 +2515,8 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 	public void onStopTrackingTouch(SeekBar seekBar) {
 	}
 
-	// --- MIDI ----
 
 	/*
-
-	@Override
-	public void onDeviceAttached(UsbDevice usbDevice) {
-	}
-
-	public void onMidiInputDeviceDetached(MidiInputDevice midiInputDevice) {
-		// TODO Auto-generated method stub
-
-	}
-
-	public void onMidiOutputDeviceDetached(MidiOutputDevice midiOutputDevice) {
-		// TODO Auto-generated method stub
-
-	}
-
-	public void onMidiInputDeviceAttached(MidiInputDevice midiInputDevice) {
-		// TODO Auto-generated method stub
-
-	}
-
-	public void onMidiOutputDeviceAttached(MidiOutputDevice midiOutputDevice) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void onMidiMiscellaneousFunctionCodes(MidiInputDevice sender, int cable, int byte1, int byte2, int byte3) {
-	}
-
-	@Override
-	public void onMidiCableEvents(MidiInputDevice sender, int cable, int byte1, int byte2, int byte3) {
-	}
-
-	@Override
-	public void onMidiSystemCommonMessage(MidiInputDevice sender, int cable, byte[] bytes) {
-	}
-
-	@Override
-	public void onMidiSystemExclusive(MidiInputDevice sender, int cable, byte[] systemExclusive) {
-	}
 
 	@Override
 	public void onMidiNoteOn(MidiInputDevice sender, int cable, int channel, int midinote, int midivelocity) {
@@ -2626,11 +2586,37 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 		}
 	}
 
+
 	@Override
-	public void onMidiControlChange(MidiInputDevice sender, int cable, int channel, int function, int value) {
+	public void onMidiChannelAftertouch(MidiInputDevice sender, int cable, int channel, int pressure) {
 		if (myMidiChannel != 0 && channel != myMidiChannel) {
 			return;
 		}
+		synth.expression(pressure / 128.0f);
+	}
+
+	@Override
+	public void onMidiPitchWheel(MidiInputDevice sender, int cable, int channel, int amount) {
+		if (myMidiChannel != 0 && channel != myMidiChannel) {
+			return;
+		}
+		synth.pitchBend((amount - 8192) / 8192.0f / 4.0f);
+	}
+
+	 */
+
+	// --- MIDI ----
+
+	public void onDeviceAttached(String deviceName) {
+	}
+
+	public void onDeviceDetached(String deviceName) {
+	}
+
+	public void onProgramChange(int programNum) {
+	}
+
+	public void onControlChange(int function, int value) {
 		if (function == 0) { // ?
 		} else if (function == 1) { // modulation amount
 			// float currentVibratoAmount = progress * progress / 25000.0f;
@@ -2751,37 +2737,11 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 		synth.updateParams();
 	}
 
-	@Override
-	public void onMidiProgramChange(MidiInputDevice sender, int cable, int channel, int program) {
-		if (myMidiChannel != 0 && channel != myMidiChannel) {
-			return;
-		}
+	public void onTimingClock() {
 	}
 
-	@Override
-	public void onMidiChannelAftertouch(MidiInputDevice sender, int cable, int channel, int pressure) {
-		if (myMidiChannel != 0 && channel != myMidiChannel) {
-			return;
-		}
-		synth.expression(pressure / 128.0f);
+	public void onSysex(byte[] data) {
 	}
-
-	@Override
-	public void onMidiPitchWheel(MidiInputDevice sender, int cable, int channel, int amount) {
-		if (myMidiChannel != 0 && channel != myMidiChannel) {
-			return;
-		}
-		synth.pitchBend((amount - 8192) / 8192.0f / 4.0f);
-	}
-
-	@Override
-	public void onMidiSingleByte(MidiInputDevice sender, int cable, int byte1) {
-	}
-
-	@Override
-	public void onDeviceDetached(UsbDevice usbDevice) {
-	}
-*/
 
 	/**
 	 * Override the back button to prompt for quit.

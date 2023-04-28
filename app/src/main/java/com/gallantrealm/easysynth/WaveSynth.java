@@ -6,6 +6,7 @@ import android.media.AudioTrack;
 
 import com.gallantrealm.mysynth.AbstractInstrument;
 import com.gallantrealm.mysynth.MySynth;
+import com.gallantrealm.mysynth.MySynthMidi;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -129,9 +130,11 @@ public class WaveSynth extends AbstractInstrument {
 	private float waveSizeDivSampleRate;
 
 	private MySynth synth;
+	private MySynthMidi midi;
 
-	public WaveSynth(Context context) {
+	public WaveSynth(Context context, MySynthMidi.Callbacks midiCallbacks) {
 		synth = MySynth.create(context);
+		midi = MySynthMidi.create(context, synth, midiCallbacks);
 		sampleRate = AudioTrack.getNativeOutputSampleRate(AudioManager.STREAM_MUSIC); // usually 44100
 		envelopeSampleRate = 100;  // 100 times a second
 		waveSizeDivSampleRate = (float) WAVE_SIZE / (float)sampleRate;
