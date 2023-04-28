@@ -1813,8 +1813,6 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 	protected void onPause() {
 		long soundPlayTime = System.currentTimeMillis() - soundLoadTime;
 		System.out.println("recordMetric: " + clientModel.getInstrumentName() + ": " + (soundPlayTime / 60000.0));
-		// NewRelic.recordMetric(clientModel.getWorldName(), "SoundPlayTime",
-		// soundPlayTime / 60000.0);
 		super.onPause();
 		// synth.stop();
 	}
@@ -2074,14 +2072,8 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 			} else if (type == SLIDE) {
 				if (note != lastNote[finger]) {
 					synth.keyRelease(1);
-					// getKeyForNote(lastNote[finger]).dispatchTouchEvent(MotionEvent.obtain(SystemClock.uptimeMillis(),
-					// SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, 0, 0,
-					// 0));
 					getKeyForNote(lastNote[finger]).setPressed(false);
 					synth.keyPress(1, note, velocity, true, false);
-					// getKeyForNote(note).dispatchTouchEvent(MotionEvent.obtain(SystemClock.uptimeMillis(),
-					// SystemClock.uptimeMillis(), MotionEvent.ACTION_DOWN, 0,
-					// 0, 0));
 					getKeyForNote(note).setPressed(true);
 				} else {
 					synth.expression(FastMath.max(0, initialY - y) / keyboard.getHeight());
@@ -2112,21 +2104,7 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 				}
 			}
 		} else { // polyphonic
-			// if (type == SLIDE && fingers == 1 && synth.portamentoAmount > 0)
-			// { // use last voice so it sounds
-			// consistent
-			// when doing a single finger glide
-			// voice = lastVoice[finger];
-			// } else {
 			voice = synth.getVoice(note);
-			// }
-			// if (type == PRESS) {
-			// System.out.println("Down: Finger " + finger + " note " + note + "
-			// voice " + voice);
-			// } else if (type == RELEASE) {
-			// System.out.println("Up: Finger " + finger + " note " + note + "
-			// voice " + voice);
-			// }
 			if (type == PRESS) {
 				keyPress(voice, note, velocity);
 			} else if (type == RELEASE) {
@@ -2141,112 +2119,6 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 					}
 				}
 			}
-			// if (voice == 1) {
-			// if (type == PRESS) {
-			// keyPress(voice, note, velocity);
-			// } else if (type == RELEASE) {
-			// keyRelease(voice, note);
-			// } else if (type == SLIDE) {
-			// if (!holdButton.isChecked()) {
-			// if (lastVoice[finger] != voice) {
-			// keyRelease(lastVoice[finger], lastNote[finger]);
-			// getKeyForNote(lastNote[finger]).dispatchTouchEvent(MotionEvent.obtain(SystemClock.uptimeMillis(),
-			// SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, 0, 0, 0));
-			// synth.keyPress(voice, note, velocity, true, false);
-			// getKeyForNote(note).dispatchTouchEvent(MotionEvent.obtain(SystemClock.uptimeMillis(),
-			// SystemClock.uptimeMillis(), MotionEvent.ACTION_DOWN, 0, 0, 0));
-			// }
-			// if (note != lastNote1 && synth.keyDown1) {
-			// synth.keyRelease(voice);
-			// getKeyForNote(lastNote1).dispatchTouchEvent(MotionEvent.obtain(SystemClock.uptimeMillis(),
-			// SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, 0, 0, 0));
-			// synth.keyPress(voice, note, velocity, true, false);
-			// getKeyForNote(note).dispatchTouchEvent(MotionEvent.obtain(SystemClock.uptimeMillis(),
-			// SystemClock.uptimeMillis(), MotionEvent.ACTION_DOWN, 0, 0, 0));
-			// } else if (note == lastNote1 && !synth.keyDown1) {
-			// synth.keyPress(voice, note, velocity, true, false);
-			// getKeyForNote(note).dispatchTouchEvent(MotionEvent.obtain(SystemClock.uptimeMillis(),
-			// SystemClock.uptimeMillis(), MotionEvent.ACTION_DOWN, 0, 0, 0));
-			// }
-			// }
-			// }
-			// lastNote1 = note;
-			// } else if (voice == 2) {
-			// if (type == PRESS) {
-			// keyPress(voice, note, velocity);
-			// } else if (type == RELEASE) {
-			// keyRelease(voice, note);
-			// } else if (type == SLIDE) {
-			// if (!holdButton.isChecked()) {
-			// if (lastVoice[finger] != voice) {
-			// keyRelease(lastVoice[finger], lastNote[finger]);
-			// }
-			// if (note != lastNote2 && synth.keyDown2) {
-			// synth.keyRelease(voice);
-			// getKeyForNote(lastNote2).dispatchTouchEvent(MotionEvent.obtain(SystemClock.uptimeMillis(),
-			// SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, 0, 0, 0));
-			// synth.keyPress(voice, note, velocity, true, false);
-			// getKeyForNote(note).dispatchTouchEvent(MotionEvent.obtain(SystemClock.uptimeMillis(),
-			// SystemClock.uptimeMillis(), MotionEvent.ACTION_DOWN, 0, 0, 0));
-			// } else if (note == lastNote2 && !synth.keyDown2) {
-			// synth.keyPress(voice, note, velocity, true, false);
-			// getKeyForNote(note).dispatchTouchEvent(MotionEvent.obtain(SystemClock.uptimeMillis(),
-			// SystemClock.uptimeMillis(), MotionEvent.ACTION_DOWN, 0, 0, 0));
-			// }
-			// }
-			// }
-			// lastNote2 = note;
-			// } else if (voice == 3) {
-			// if (type == PRESS) {
-			// keyPress(voice, note, velocity);
-			// } else if (type == RELEASE) {
-			// keyRelease(voice, note);
-			// } else if (type == SLIDE) {
-			// if (!holdButton.isChecked()) {
-			// if (lastVoice[finger] != voice) {
-			// keyRelease(lastVoice[finger], lastNote[finger]);
-			// }
-			// if (note != lastNote3 && synth.keyDown3) {
-			// synth.keyRelease(voice);
-			// getKeyForNote(lastNote3).dispatchTouchEvent(MotionEvent.obtain(SystemClock.uptimeMillis(),
-			// SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, 0, 0, 0));
-			// synth.keyPress(voice, note, velocity, true, false);
-			// getKeyForNote(note).dispatchTouchEvent(MotionEvent.obtain(SystemClock.uptimeMillis(),
-			// SystemClock.uptimeMillis(), MotionEvent.ACTION_DOWN, 0, 0, 0));
-			// } else if (note == lastNote3 && !synth.keyDown3) {
-			// synth.keyPress(voice, note, velocity, true, false);
-			// getKeyForNote(note).dispatchTouchEvent(MotionEvent.obtain(SystemClock.uptimeMillis(),
-			// SystemClock.uptimeMillis(), MotionEvent.ACTION_DOWN, 0, 0, 0));
-			// }
-			// }
-			// }
-			// lastNote3 = note;
-			// } else { // voice 4
-			// if (type == PRESS) {
-			// keyPress(voice, note, velocity);
-			// } else if (type == RELEASE) {
-			// keyRelease(voice, note);
-			// } else if (type == SLIDE) {
-			// if (!holdButton.isChecked()) {
-			// if (lastVoice[finger] != voice) {
-			// keyRelease(lastVoice[finger], lastNote[finger]);
-			// }
-			// if (note != lastNote4 && synth.keyDown4) {
-			// synth.keyRelease(voice);
-			// getKeyForNote(lastNote4).dispatchTouchEvent(MotionEvent.obtain(SystemClock.uptimeMillis(),
-			// SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, 0, 0, 0));
-			// synth.keyPress(voice, note, velocity, true, false);
-			// getKeyForNote(note).dispatchTouchEvent(MotionEvent.obtain(SystemClock.uptimeMillis(),
-			// SystemClock.uptimeMillis(), MotionEvent.ACTION_DOWN, 0, 0, 0));
-			// } else if (note == lastNote4 && !synth.keyDown4) {
-			// synth.keyPress(voice, note, velocity, true, false);
-			// getKeyForNote(note).dispatchTouchEvent(MotionEvent.obtain(SystemClock.uptimeMillis(),
-			// SystemClock.uptimeMillis(), MotionEvent.ACTION_DOWN, 0, 0, 0));
-			// }
-			// }
-			// }
-			// lastNote4 = note;
-			// }
 		}
 		lastNote[finger] = note;
 		lastVoice[finger] = voice;
