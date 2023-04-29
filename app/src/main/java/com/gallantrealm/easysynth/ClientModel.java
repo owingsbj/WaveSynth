@@ -9,6 +9,7 @@ import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -454,17 +455,13 @@ public class ClientModel {
 		return null;
 	}
 
-	public Object loadObject(String fileName) {
-		return loadObject(fileName, false);
-	}
-
 	/**
 	 * Loads a serializable object from a file.
 	 * 
 	 * @param fileName
 	 * @return
 	 */
-	public Object loadObject(String fileName, boolean external) {
+	public Object loadObject(String fileName, boolean preferExternal) {
 		Object object = null;
 		if (fileName.startsWith("file:")) { // via an external url
 			try {
@@ -473,7 +470,7 @@ public class ClientModel {
 			} catch (Exception e) {
 			}
 		} else { // within the application
-			if (external && getContext().getExternalFilesDir(null) != null) { // external file
+			if (preferExternal && getContext().getExternalFilesDir(null) != null) { // external file
 				try {
 					File file = new File(getContext().getExternalFilesDir(null), fileName);
 					object = deserializeObject(new FileInputStream(file));
@@ -503,14 +500,17 @@ public class ClientModel {
 		deleteObject(fileName, false);
 	}
 
-	public void deleteObject(String fileName, boolean external) {
+	public void deleteObject(String fileName, boolean preferExternal) {
 		try {
 			File file;
 			if (fileName.startsWith("file:")) { // an external file
 				file = new File(fileName.substring(7));
 			} else { // within the application
-				if (external && getContext().getExternalFilesDir(null) != null) {
+				if (preferExternal && getContext().getExternalFilesDir(null) != null) {
 					file = new File(getContext().getExternalFilesDir(null), fileName);
+					if (!file.exists()) {
+						file = new File(getContext().getFilesDir(), fileName);
+					}
 				} else {
 					file = new File(getContext().getFilesDir(), fileName);
 				}
@@ -521,16 +521,12 @@ public class ClientModel {
 		}
 	}
 
-	public void saveObject(Object object, String fileName) {
-		saveObject(object, fileName, false);
-	}
-
 	/**
 	 * Saves an object to app-local files. The object needs to be serializable
 	 */
-	public void saveObject(Object object, String fileName, boolean external) {
+	public File saveObject(Object object, String fileName, boolean preferExternal) {
 		boolean saved = false;
-		if (external && getContext().getExternalFilesDir(null) != null) {
+		if (preferExternal && getContext().getExternalFilesDir(null) != null) {
 			try {
 				File file = new File(getContext().getExternalFilesDir(null), fileName);
 				if (file.exists()) {
@@ -538,6 +534,7 @@ public class ClientModel {
 				}
 				serializeObject(object, new FileOutputStream(file));
 				saved = true;
+				return file;
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -550,11 +547,32 @@ public class ClientModel {
 				}
 				serializeObject(object, new FileOutputStream(file));
 				saved = true;
+				return file;
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Copies all unique internal files to external, then deletes the internals.
+	 */
+	public void migrateInternalFilesToExternal() {
+		File internalFilesDir = getContext().getFilesDir();
+		File externalFilesDir = getContext().getExternalFilesDir(null);
+		File[] files = internalFilesDir.listFiles();
+		for (File file : files) {
+			try {
+				File outFile = new File(externalFilesDir, file.getName());
+				Files.copy(file.toPath(), outFile.toPath());
+				file.delete();
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
 		}
 	}
+
 
 	/**
 	 * Exports an object to sdcard storage.
