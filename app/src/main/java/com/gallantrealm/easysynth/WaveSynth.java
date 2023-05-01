@@ -801,7 +801,6 @@ public class WaveSynth extends AbstractInstrument {
 	@Override
 	public void noteRelease(int midinote) {
 		int note = midinote - 60 + 12;
-		System.out.println("EasySynth.noteRelease "+note);
 		if (mode == MODE_MONOPHONIC) {
 			if (lastNote1 == note) {
 				keyRelease(1);
