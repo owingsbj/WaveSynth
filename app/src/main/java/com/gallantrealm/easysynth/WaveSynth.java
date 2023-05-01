@@ -457,58 +457,7 @@ public class WaveSynth extends AbstractInstrument {
 
 	int lastNote1, lastNote2, lastNote3, lastNote4;
 
-	public void playNote(int note, float velocity, boolean glide, boolean startsSilent) {
-		if (mode == MODE_MONOPHONIC) {
-			keyPress(1, note, velocity, false, true);
-			lastNote1 = note;
-		} else if (mode == MODE_CHORUS) {
-			keyPress(1, note, velocity, false, true);
-			lastNote1 = note;
-			lastNote2 = note;
-			lastNote3 = note;
-			lastNote4 = note;
-		} else if (mode == MODE_POLYPHONIC) {
-			int voice = getVoice(note);
-			keyPress(voice, note, velocity, false, true);
-			if (voice == 1) {
-				lastNote1 = note;
-			} else if (voice == 2) {
-				lastNote2 = note;
-			} else if (voice == 3) {
-				lastNote3 = note;
-			} else if (voice == 4) {
-				lastNote4 = note;
-			}
-		}
-	}
-
-	public void stopPlayingNote(int note) {
-		if (mode == MODE_MONOPHONIC) {
-			if (lastNote1 == note) {
-				keyRelease(1);
-			}
-		} else if (mode == MODE_CHORUS) {
-			if (lastNote1 == note) {
-				keyRelease(1);
-				keyRelease(2);
-				keyRelease(3);
-				keyRelease(4);
-			}
-		} else if (mode == MODE_POLYPHONIC) {
-			if (lastNote1 == note) {
-				keyRelease(1);
-			} else if (lastNote2 == note) {
-				keyRelease(2);
-			} else if (lastNote3 == note) {
-				keyRelease(3);
-			} else if (lastNote4 == note) {
-				keyRelease(4);
-			}
-		}
-	}
-
 	public void keyPress(int voice, int note, float velocity, boolean glide, boolean startsSilent) {
-		System.out.println("EasySynth.keyPress voice="+voice+"  note="+note);
 		if (sequenceRate > 0) {
 			sequencerBaseNote = note;
 			if (!sequencerRunning) {
@@ -550,7 +499,6 @@ public class WaveSynth extends AbstractInstrument {
 	}
 
 	public void keyRelease(int voice) {
-		System.out.println("EasySynth.keyRelease voice="+voice);
 		if (sequenceRate > 0) {
 			sequencerRunning = false;
 			internalKeyRelease(1);
@@ -823,15 +771,59 @@ public class WaveSynth extends AbstractInstrument {
 	}
 
 	@Override
-	public void notePress(int midinote, float velocity) {
+	public void notePress(int midinote, float midivelocity) {
 		int note = midinote - 60 + 12;
-		playNote(note, velocity, false, true);
+		float velocity = FastMath.min(1.0f, (midivelocity + 1) / 64.0f);
+		if (mode == MODE_MONOPHONIC) {
+			keyPress(1, note, velocity, false, true);
+			lastNote1 = note;
+		} else if (mode == MODE_CHORUS) {
+			keyPress(1, note, velocity, false, true);
+			lastNote1 = note;
+			lastNote2 = note;
+			lastNote3 = note;
+			lastNote4 = note;
+		} else if (mode == MODE_POLYPHONIC) {
+			int voice = getVoice(note);
+			keyPress(voice, note, velocity, false, true);
+			if (voice == 1) {
+				lastNote1 = note;
+			} else if (voice == 2) {
+				lastNote2 = note;
+			} else if (voice == 3) {
+				lastNote3 = note;
+			} else if (voice == 4) {
+				lastNote4 = note;
+			}
+		}
 	}
 
 	@Override
 	public void noteRelease(int midinote) {
 		int note = midinote - 60 + 12;
-		stopPlayingNote(note);
+		System.out.println("EasySynth.noteRelease "+note);
+		if (mode == MODE_MONOPHONIC) {
+			if (lastNote1 == note) {
+				keyRelease(1);
+			}
+		} else if (mode == MODE_CHORUS) {
+			if (lastNote1 == note) {
+				keyRelease(1);
+				keyRelease(2);
+				keyRelease(3);
+				keyRelease(4);
+			}
+		} else if (mode == MODE_POLYPHONIC) {
+			if (lastNote1 == note) {
+				keyRelease(1);
+			} else if (lastNote2 == note) {
+				keyRelease(2);
+			} else if (lastNote3 == note) {
+				keyRelease(3);
+			} else if (lastNote4 == note) {
+				keyRelease(4);
+			}
+		}
 	}
 
 	@Override
