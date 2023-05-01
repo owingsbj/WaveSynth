@@ -150,6 +150,7 @@ public class WaveSynth extends AbstractInstrument {
 			System.out.println("EasySynth.start");
 			synth.start();
 			synth.setInstrument(this);
+			midi.start();
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
@@ -160,6 +161,7 @@ public class WaveSynth extends AbstractInstrument {
 	 */
 	public void stop() {
 		System.out.println("EasySynth.stop");
+		midi.stop();
 		synth.stop();
 	}
 
@@ -821,13 +823,15 @@ public class WaveSynth extends AbstractInstrument {
 	}
 
 	@Override
-	public void notePress(int note, float velocity) {
-
+	public void notePress(int midinote, float velocity) {
+		int note = midinote - 60 + 12;
+		playNote(note, velocity, false, true);
 	}
 
 	@Override
-	public void noteRelease(int note) {
-
+	public void noteRelease(int midinote) {
+		int note = midinote - 60 + 12;
+		stopPlayingNote(note);
 	}
 
 	@Override
