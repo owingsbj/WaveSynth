@@ -58,6 +58,8 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.core.content.FileProvider;
+
 //import com.newrelic.agent.android.NewRelic;
 
 public class MainActivity extends Activity implements OnTouchListener, OnSeekBarChangeListener, OnCheckedChangeListener, View.OnClickListener, MySynthMidi.Callbacks {
@@ -268,6 +270,8 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 		setContentView(R.layout.synth_screen);
 
 		clientModel.loadPreferences(this);
+
+		clientModel.migrateInternalFilesToExternal();
 
 		synth = new WaveSynth(this, this);
 
@@ -675,12 +679,11 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 		sequencerPane.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT));
 		recordPane.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT));
 
-		if (!clientModel.isFullVersion() && !clientModel.isGoggleDogPass()) {
-			buyButton.setVisibility(View.VISIBLE);
-		} else {
+//		if (!clientModel.isFullVersion() && !clientModel.isGoggleDogPass()) {     	// now 100% free
+//			buyButton.setVisibility(View.VISIBLE);
+//		} else {
 			buyButton.setVisibility(View.GONE);
-			
-		}
+//		}
 		buyButton.setOnClickListener(this);
 		soundButton.setOnClickListener(this);
 		harmonicsButton.setOnClickListener(this);
@@ -1277,6 +1280,29 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 					}
 				}
 			}
+
+			filesDir = getExternalFilesDir(null);
+			files = filesDir.listFiles();
+			// Arrays.sort(files, new Comparator<File>() {
+			//
+			// };
+			for (int i = 0; i < files.length; i++) {
+				String filename = files[i].getName();
+				boolean found = false;
+				for (int j = 0; j < assets.length; j++) {
+					if (filename.equals(assets[j])) {
+						found = true;
+					}
+				}
+				if (!found) {
+					int synthpos = filename.indexOf(".easysynth");
+					if (synthpos >= 0) {
+						String name = filename.substring(0, synthpos);
+						soundAdapter.add(name);
+					}
+				}
+			}
+
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -1285,11 +1311,11 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 	}
 
 	public void saveSound() {
-		if (!clientModel.isFullVersion() && !clientModel.isGoggleDogPass()) {
-			MessageDialog messageDialog = new MessageDialog(this, "Save Disabled", "Buy full version to enable save.", null);
-			messageDialog.show();
-			return;
-		}
+//		if (!clientModel.isFullVersion() && !clientModel.isGoggleDogPass()) {
+//			MessageDialog messageDialog = new MessageDialog(this, "Save Disabled", "Buy full version to enable save.", null);
+//			messageDialog.show();
+//			return;
+//		}
 		String initiallSoundName = (String) soundSpinner.getSelectedItem();
 		if (initiallSoundName.startsWith("file://")) {
 			initiallSoundName = initiallSoundName.substring(initiallSoundName.lastIndexOf("/") + 1);
@@ -1303,7 +1329,7 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 				if (promptForName.getButtonPressed() == 0) {
 					String soundName = promptForName.getValue();
 					Sound sound = synth.generateSound();
-					clientModel.saveObject(sound, soundName + ".easysynth", false);
+					clientModel.saveObject(sound, soundName + ".easysynth", true);
 					dirty = false;
 					System.out.println("Saved sound as " + soundName + ".easysynth");
 
@@ -1357,12 +1383,15 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 		final String soundName = (String) soundSpinner.getSelectedItem();
 		try {
 			Sound sound = synth.generateSound();
-			File file = clientModel.exportObject(sound, soundName + ".easysynth");
-			System.out.println("Exported sound as " + soundName + ".easysynth");
 
+//			File file = clientModel.exportObject(sound, soundName + ".easysynth");
+//			System.out.println("Exported sound as " + soundName + ".easysynth");
+			File file = clientModel.saveObject(sound, soundName + ".easysynth", true);
+			System.out.println("Sending sound in file "+file);
 			Intent intent = new Intent(Intent.ACTION_SEND);
 			intent.setType("application/vnd.gallantrealm.easysynth");
-			Uri uri = Uri.fromFile(file);
+//			Uri uri = Uri.fromFile(file);
+			Uri uri = FileProvider.getUriForFile(this, "com.gallantrealm.easysynth.fileprovider", file);
 			intent.putExtra(Intent.EXTRA_STREAM, uri);
 			intent.putExtra(Intent.EXTRA_SUBJECT, soundName);
 			if (clientModel.isAmazon()) {
@@ -1383,11 +1412,11 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 		// soundPlayTime / 60000.0);
 
 		if (soundName.startsWith("file://")) { // playing a sent sound
-			sound = (Sound) clientModel.loadObject(soundName, false);
+			sound = (Sound) clientModel.loadObject(soundName, true);
 			applySound(sound);
 			System.out.println("Loaded external file sound " + soundName);
 		} else {
-			sound = (Sound) clientModel.loadObject(soundName + ".easysynth", false);
+			sound = (Sound) clientModel.loadObject(soundName + ".easysynth", true);
 			applySound(sound);
 			System.out.println("Loaded internal file sound " + soundName + ".easysynth");
 			clientModel.setInstrumentName(soundName);
@@ -1403,7 +1432,7 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 			@Override
 			public void onDismiss(DialogInterface dialog) {
 				if (promptForDelete.getButtonPressed() == 0) {
-					clientModel.deleteObject(soundName + ".easysynth", false);
+					clientModel.deleteObject(soundName + ".easysynth", true);
 					System.out.println("Deleted sound " + soundName + ".easysynth");
 					updateSoundSpinner();
 				}
@@ -1567,11 +1596,11 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 		runOnUiThread(new Runnable() {
 			@Override
 			public void run() {
-				if (!clientModel.isFullVersion() && !clientModel.isGoggleDogPass() && Locale.getDefault().getLanguage().startsWith("en")) {
-					buyButton.setVisibility(View.VISIBLE);
-				} else {
+//				if (!clientModel.isFullVersion() && !clientModel.isGoggleDogPass() && Locale.getDefault().getLanguage().startsWith("en")) {
+//					buyButton.setVisibility(View.VISIBLE);
+//				} else {
 					buyButton.setVisibility(View.GONE);
-				}
+//				}
 				applyingASound = true;
 				// set the controls
 				if (synth.mode == 0) {
