@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-	<string name="app_name">EasySynth</string>
+	<string name="app_name">WaveSynth</string>
 	<string name="appTagline">Wavetable Synthesizer</string>
 	<string name="mainMenuClassName">com.gallantrealm.easysynth.MainActivity</string>
 	<string name="admobid">a1520579fb15c66</string>
