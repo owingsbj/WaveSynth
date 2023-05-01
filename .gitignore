@@ -19,3 +19,4 @@ keystore.properties
 /app/build
 /mySynth/build
 /myAndroid/build
+/.idea/deploymentTargetDropDown.xml
