@@ -6,9 +6,13 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.io.Reader;
+import java.io.Writer;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -16,6 +20,9 @@ import java.util.Iterator;
 import java.util.List;
 import com.gallantrealm.easysynth.theme.DefaultTheme;
 import com.gallantrealm.easysynth.theme.Theme;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
@@ -466,14 +473,14 @@ public class ClientModel {
 		if (fileName.startsWith("file:")) { // via an external url
 			try {
 				File file = new File(fileName.substring(7));
-				object = deserializeObject(new FileInputStream(file));
+				object = jsonDeserializeObject(new FileInputStream(file));
 			} catch (Exception e) {
 			}
 		} else { // within the application
 			if (preferExternal && getContext().getExternalFilesDir(null) != null) { // external file
 				try {
 					File file = new File(getContext().getExternalFilesDir(null), fileName);
-					object = deserializeObject(new FileInputStream(file));
+					object = jsonDeserializeObject(new FileInputStream(file));
 				} catch (Exception e) {
 				}
 			}
@@ -532,7 +539,7 @@ public class ClientModel {
 				if (file.exists()) {
 					file.delete();
 				}
-				serializeObject(object, new FileOutputStream(file));
+				jsonSerializeObject(object, new FileOutputStream(file));
 				saved = true;
 				return file;
 			} catch (Exception e) {
@@ -588,7 +595,7 @@ public class ClientModel {
 			if (file.exists()) {
 				file.delete();
 			}
-			serializeObject(object, new FileOutputStream(file));
+			jsonSerializeObject(object, new FileOutputStream(file));
 		} catch (Exception e) {
 			e.printStackTrace();
 			return null;
@@ -612,6 +619,34 @@ public class ClientModel {
 			object = inStream.readObject();
 		} finally {
 			inStream.close();
+		}
+		return object;
+	}
+
+	private void jsonSerializeObject(Object object, OutputStream os) throws Exception {
+		Writer w = new PrintWriter(os);
+		try {
+			Gson gson = new GsonBuilder().setPrettyPrinting().create();
+			String json = gson.toJson(object, Sound.class);
+			w.write(json);
+		} finally {
+			w.close();
+		}
+	}
+
+	private Object jsonDeserializeObject(InputStream is) throws Exception {
+		Reader r = new InputStreamReader(is);
+		char[] buffer = new char[4096];
+		StringBuilder sb = new StringBuilder();
+		for(int len; (len = r.read(buffer)) > 0;)
+			sb.append(buffer, 0, len);
+		String json = sb.toString();
+		Object object = null;
+		try {
+			Gson gson = new GsonBuilder().setLenient().create();
+			object = gson.fromJson(json, Sound.class);
+		} finally {
+			r.close();
 		}
 		return object;
 	}

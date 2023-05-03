@@ -1295,7 +1295,7 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 					}
 				}
 				if (!found) {
-					int synthpos = filename.indexOf(".easysynth");
+					int synthpos = filename.indexOf(".wavesynth");
 					if (synthpos >= 0) {
 						String name = filename.substring(0, synthpos);
 						soundAdapter.add(name);
@@ -1329,9 +1329,9 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 				if (promptForName.getButtonPressed() == 0) {
 					String soundName = promptForName.getValue();
 					Sound sound = synth.generateSound();
-					clientModel.saveObject(sound, soundName + ".easysynth", true);
+					clientModel.saveObject(sound, soundName + ".wavesynth", true);
 					dirty = false;
-					System.out.println("Saved sound as " + soundName + ".easysynth");
+					System.out.println("Saved sound as " + soundName + ".wavesynth");
 
 					// Uncomment to save for update
 					// clientModel.exportObject(sound, soundName +
@@ -1357,47 +1357,24 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 	}
 
 	public void sendSound() {
-		// if (!clientModel.isFullVersion()) {
-		// final MessageDialog fullVersionPrompt = new MessageDialog(this, "Full
-		// Version", "Sending sounds requires full version. Do you want to buy
-		// the full version?", new String[] { "Buy", "Cancel" });
-		// fullVersionPrompt.setOnDismissListener(new
-		// DialogInterface.OnDismissListener() {
-		// @Override
-		// public void onDismiss(DialogInterface dialog) {
-		// if (fullVersionPrompt.getButtonPressed() == 0) {
-		// boolean launched = clientModel.buyFullVersion();
-		// if (!launched) {
-		// final MessageDialog messageDialog = new
-		// MessageDialog(MainActivity.this, null, "There is a problem with
-		// accessing the store.\nCheck your network connection and try again.",
-		// new String[] { "OK" }, null);
-		// messageDialog.show();
-		// }
-		// }
-		// }
-		// });
-		// fullVersionPrompt.show();
-		// return;
-		// }
 		final String soundName = (String) soundSpinner.getSelectedItem();
 		try {
 			Sound sound = synth.generateSound();
 
 //			File file = clientModel.exportObject(sound, soundName + ".easysynth");
 //			System.out.println("Exported sound as " + soundName + ".easysynth");
-			File file = clientModel.saveObject(sound, soundName + ".easysynth", true);
+			File file = clientModel.saveObject(sound, soundName + ".wavesynth", true);
 			System.out.println("Sending sound in file "+file);
 			Intent intent = new Intent(Intent.ACTION_SEND);
-			intent.setType("application/vnd.gallantrealm.easysynth");
+			intent.setType("application/vnd.gallantrealm.wavesynth");
 //			Uri uri = Uri.fromFile(file);
-			Uri uri = FileProvider.getUriForFile(this, "com.gallantrealm.easysynth.fileprovider", file);
+			Uri uri = FileProvider.getUriForFile(this, "com.gallantrealm.wavesynth.fileprovider", file);
 			intent.putExtra(Intent.EXTRA_STREAM, uri);
 			intent.putExtra(Intent.EXTRA_SUBJECT, soundName);
 			if (clientModel.isAmazon()) {
-				intent.putExtra(Intent.EXTRA_TEXT, "Sharing an EasySynth instrument with you.  You can play it by installing EasySynth from the Amazon AppStore!");
+				intent.putExtra(Intent.EXTRA_TEXT, "Sharing an WaveSynth instrument with you.  You can play it by installing EasySynth from the Amazon AppStore!");
 			} else {
-				intent.putExtra(Intent.EXTRA_TEXT, "Sharing an EasySynth instrument with you.  You can play it by installing EasySynth from Google Play at  http://play.google.com/store/apps/details?id=com.gallantrealm.easysynth");
+				intent.putExtra(Intent.EXTRA_TEXT, "Sharing an WaveSynth instrument with you.  You can play it by installing EasySynth from Google Play at  http://play.google.com/store/apps/details?id=com.gallantrealm.easysynth");
 			}
 			clientModel.getContext().startActivity(intent);
 		} catch (Exception e) { // might fail
@@ -1406,19 +1383,23 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 	}
 
 	public void loadSound(String soundName) {
-		long soundPlayTime = System.currentTimeMillis() - soundLoadTime;
-		System.out.println("recordMetric: " + clientModel.getInstrumentName() + ": " + (soundPlayTime / 60000.0));
-		// NewRelic.recordMetric(clientModel.getWorldName(), "SoundPlayTime",
-		// soundPlayTime / 60000.0);
-
 		if (soundName.startsWith("file://")) { // playing a sent sound
 			sound = (Sound) clientModel.loadObject(soundName, true);
 			applySound(sound);
 			System.out.println("Loaded external file sound " + soundName);
 		} else {
-			sound = (Sound) clientModel.loadObject(soundName + ".easysynth", true);
-			applySound(sound);
-			System.out.println("Loaded internal file sound " + soundName + ".easysynth");
+			sound = (Sound) clientModel.loadObject(soundName + ".wavesynth", true);
+			if (sound != null) {
+				System.out.println("Loaded external file sound " + soundName);
+			} else { // try internal (easysynth)
+				sound = (Sound) clientModel.loadObject(soundName + ".easysynth", true);
+				if (sound != null) {
+					applySound(sound);
+					System.out.println("Loaded internal file sound " + soundName + ".easysynth");
+				} else {
+					System.out.println("Sound couldn't be loaded!!!");
+				}
+			}
 			clientModel.setInstrumentName(soundName);
 			clientModel.savePreferences(this);
 		}
