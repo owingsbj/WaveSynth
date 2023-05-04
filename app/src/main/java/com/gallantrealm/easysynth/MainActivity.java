@@ -3,9 +3,10 @@ package com.gallantrealm.easysynth;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Locale;
+
 import com.gallantrealm.android.ContentUriUtil;
 import com.gallantrealm.easysynth.theme.AuraTheme;
 import com.gallantrealm.easysynth.theme.CustomTheme;
@@ -19,6 +20,7 @@ import com.gallantrealm.easysynth.theme.TropicalTheme;
 import com.gallantrealm.easysynth.theme.WoodTheme;
 import com.gallantrealm.android.InputDialog;
 import com.gallantrealm.android.MessageDialog;
+import com.gallantrealm.mysynth.MySynth;
 import com.gallantrealm.mysynth.MySynthMidi;
 
 import android.Manifest;
@@ -251,7 +253,9 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 
 	int[] keyvoice = new int[25];
 
-	WaveSynth synth;
+	private MySynth synth;
+	private MySynthMidi midi;
+	WaveSynth instrument;
 
 	private boolean dirty;
 
@@ -273,7 +277,9 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 
 		clientModel.migrateInternalFilesToExternal();
 
-		synth = new WaveSynth(this, this);
+		synth = MySynth.create(this);
+		midi = MySynthMidi.create(this, synth, this);
+		instrument = new WaveSynth(this);
 
 		this.setVolumeControlStream(AudioManager.STREAM_MUSIC);
 
@@ -501,15 +507,15 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 			public void onItemSelected(AdapterView av, View v, int arg2, long arg3) {
 				int velocitySelection = velocitySpinner.getSelectedItemPosition();
 				if (velocitySelection == 0) { // none
-					synth.velocityType = WaveSynth.VELOCITY_NONE;
+					instrument.velocityType = WaveSynth.VELOCITY_NONE;
 				} else if (velocitySelection == 1) { // volume
-					synth.velocityType = WaveSynth.VELOCITY_VOLUME;
+					instrument.velocityType = WaveSynth.VELOCITY_VOLUME;
 				} else if (velocitySelection == 2) { // filter
-					synth.velocityType = WaveSynth.VELOCITY_FILTER;
+					instrument.velocityType = WaveSynth.VELOCITY_FILTER;
 				} else if (velocitySelection == 3) { // both
-					synth.velocityType = WaveSynth.VELOCITY_BOTH;
+					instrument.velocityType = WaveSynth.VELOCITY_BOTH;
 				}
-				synth.updateParams();
+				instrument.updateParams();
 			}
 
 			@Override
@@ -525,19 +531,19 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 			public void onItemSelected(AdapterView av, View v, int arg2, long arg3) {
 				int expressionSelection = expressionSpinner.getSelectedItemPosition();
 				if (expressionSelection == 0) { // none
-					synth.expressionType = WaveSynth.EXPRESSION_NONE;
+					instrument.expressionType = WaveSynth.EXPRESSION_NONE;
 				} else if (expressionSelection == 1) { // volume
-					synth.expressionType = WaveSynth.EXPRESSION_VOLUME;
+					instrument.expressionType = WaveSynth.EXPRESSION_VOLUME;
 				} else if (expressionSelection == 2) { // filter
-					synth.expressionType = WaveSynth.EXPRESSION_FILTER;
+					instrument.expressionType = WaveSynth.EXPRESSION_FILTER;
 				} else if (expressionSelection == 3) { // vibrato
-					synth.expressionType = WaveSynth.EXPRESSION_VIBRATO;
+					instrument.expressionType = WaveSynth.EXPRESSION_VIBRATO;
 				} else if (expressionSelection == 4) { // pitch
-					synth.expressionType = WaveSynth.EXPRESSION_PITCH;
+					instrument.expressionType = WaveSynth.EXPRESSION_PITCH;
 				} else if (expressionSelection == 5) { // both
-					synth.expressionType = WaveSynth.EXPRESSION_VOLUME_AND_FILTER;
+					instrument.expressionType = WaveSynth.EXPRESSION_VOLUME_AND_FILTER;
 				}
-				synth.updateParams();
+				instrument.updateParams();
 			}
 
 			@Override
@@ -549,11 +555,11 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 
 			@Override
 			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-				synth.hold = isChecked;
-				synth.keyRelease(1);
-				synth.keyRelease(2);
-				synth.keyRelease(3);
-				synth.keyRelease(4);
+				instrument.hold = isChecked;
+				instrument.keyRelease(1);
+				instrument.keyRelease(2);
+				instrument.keyRelease(3);
+				instrument.keyRelease(4);
 				clearHolds();
 			}
 		});
@@ -565,8 +571,8 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 			@Override
 			public void onItemSelected(AdapterView av, View v, int arg2, long arg3) {
 				int keySelection = keySpinner.getSelectedItemPosition();
-				synth.key = keySelection;
-				synth.updateParams();
+				instrument.key = keySelection;
+				instrument.updateParams();
 			}
 
 			@Override
@@ -588,8 +594,8 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 
 			@Override
 			public void onItemSelected(AdapterView av, View v, int arg2, long arg3) {
-				synth.vibratoDestination = vibratoDestinationSpinner.getSelectedItemPosition();
-				synth.updateParams();
+				instrument.vibratoDestination = vibratoDestinationSpinner.getSelectedItemPosition();
+				instrument.updateParams();
 			}
 
 			@Override
@@ -605,9 +611,9 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 
 			@Override
 			public void onItemSelected(AdapterView av, View v, int arg2, long arg3) {
-				synth.vibratoType = vibratoTypeSpinner.getSelectedItemPosition();
-				synth.genVibratoWaves();
-				synth.updateParams();
+				instrument.vibratoType = vibratoTypeSpinner.getSelectedItemPosition();
+				instrument.genVibratoWaves();
+				instrument.updateParams();
 			}
 
 			@Override
@@ -623,8 +629,8 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 
 			@Override
 			public void onItemSelected(AdapterView av, View v, int arg2, long arg3) {
-				synth.vibrato2Destination = vibrato2DestinationSpinner.getSelectedItemPosition();
-				synth.updateParams();
+				instrument.vibrato2Destination = vibrato2DestinationSpinner.getSelectedItemPosition();
+				instrument.updateParams();
 			}
 
 			@Override
@@ -640,9 +646,9 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 
 			@Override
 			public void onItemSelected(AdapterView av, View v, int arg2, long arg3) {
-				synth.vibrato2Type = vibrato2TypeSpinner.getSelectedItemPosition();
-				synth.genVibratoWaves();
-				synth.updateParams();
+				instrument.vibrato2Type = vibrato2TypeSpinner.getSelectedItemPosition();
+				instrument.genVibratoWaves();
+				instrument.updateParams();
 			}
 
 			@Override
@@ -746,9 +752,9 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 
 		setMidiChannel(clientModel.getMidiChannel());
 
-		synth.tuning = clientModel.getSampleRateReducer();
+		instrument.tuning = clientModel.getSampleRateReducer();
 
-		synth.tuningCents = clientModel.getTuningCents();
+		instrument.tuningCents = clientModel.getTuningCents();
 
 		saveButton.setOnClickListener(this);
 		sendButton.setOnClickListener(this);
@@ -797,44 +803,44 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 			@Override
 			public void onItemSelected(AdapterView av, View v, int arg2, long arg3) {
 				if (filterTypeSpinner.getSelectedItem().equals("Low Pass")) {
-					synth.filterType = synth.FILTER_LOWPASS;
-					synth.filterFixed = false;
+					instrument.filterType = instrument.FILTER_LOWPASS;
+					instrument.filterFixed = false;
 				} else if (filterTypeSpinner.getSelectedItem().equals("Band Pass")) {
-					synth.filterType = synth.FILTER_BANDPASS;
-					synth.filterFixed = false;
+					instrument.filterType = instrument.FILTER_BANDPASS;
+					instrument.filterFixed = false;
 				} else if (filterTypeSpinner.getSelectedItem().equals("Fade")) {
-					synth.filterType = synth.FILTER_FADE;
-					synth.filterFixed = false;
+					instrument.filterType = instrument.FILTER_FADE;
+					instrument.filterFixed = false;
 				} else if (filterTypeSpinner.getSelectedItem().equals("High Pass")) {
-					synth.filterType = synth.FILTER_HIGHPASS;
-					synth.filterFixed = false;
+					instrument.filterType = instrument.FILTER_HIGHPASS;
+					instrument.filterFixed = false;
 				} else if (filterTypeSpinner.getSelectedItem().equals("Comb 1")) {
-					synth.filterType = synth.FILTER_COMB1;
-					synth.filterFixed = false;
+					instrument.filterType = instrument.FILTER_COMB1;
+					instrument.filterFixed = false;
 				} else if (filterTypeSpinner.getSelectedItem().equals("Comb 2")) {
-					synth.filterType = synth.FILTER_COMB2;
-					synth.filterFixed = false;
+					instrument.filterType = instrument.FILTER_COMB2;
+					instrument.filterFixed = false;
 				} else if (filterTypeSpinner.getSelectedItem().equals("Comb 3")) {
-					synth.filterType = synth.FILTER_COMB3;
-					synth.filterFixed = false;
+					instrument.filterType = instrument.FILTER_COMB3;
+					instrument.filterFixed = false;
 				} else if (filterTypeSpinner.getSelectedItem().equals("Comb 4")) {
-					synth.filterType = synth.FILTER_COMB4;
-					synth.filterFixed = false;
+					instrument.filterType = instrument.FILTER_COMB4;
+					instrument.filterFixed = false;
 				} else if (filterTypeSpinner.getSelectedItem().equals("Formant 1")) {
-					synth.filterType = synth.FILTER_FORMANT1;
-					synth.filterFixed = true;
+					instrument.filterType = instrument.FILTER_FORMANT1;
+					instrument.filterFixed = true;
 				} else if (filterTypeSpinner.getSelectedItem().equals("Formant 2")) {
-					synth.filterType = synth.FILTER_FORMANT2;
-					synth.filterFixed = true;
+					instrument.filterType = instrument.FILTER_FORMANT2;
+					instrument.filterFixed = true;
 				} else if (filterTypeSpinner.getSelectedItem().equals("Formant 3")) {
-					synth.filterType = synth.FILTER_FORMANT3;
-					synth.filterFixed = true;
+					instrument.filterType = instrument.FILTER_FORMANT3;
+					instrument.filterFixed = true;
 				} else if (filterTypeSpinner.getSelectedItem().equals("Formant 4")) {
-					synth.filterType = synth.FILTER_FORMANT4;
-					synth.filterFixed = true;
+					instrument.filterType = instrument.FILTER_FORMANT4;
+					instrument.filterFixed = true;
 				}
-				synth.genWaves();
-				synth.updateParams();
+				instrument.genWaves();
+				instrument.updateParams();
 			}
 
 			@Override
@@ -858,8 +864,8 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 		ampOverdrivePerVoiceCheckBox.setOnCheckedChangeListener(new OnCheckedChangeListener() {
 			@Override
 			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-				synth.ampOverdrivePerVoice = isChecked;
-				synth.updateParams();
+				instrument.ampOverdrivePerVoice = isChecked;
+				instrument.updateParams();
 			}
 		});
 		vibratoAmount.setOnSeekBarChangeListener(this);
@@ -867,8 +873,8 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 		vibratoSyncCheckBox.setOnCheckedChangeListener(new OnCheckedChangeListener() {
 			@Override
 			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-				synth.vibratoSync = isChecked;
-				synth.updateParams();
+				instrument.vibratoSync = isChecked;
+				instrument.updateParams();
 			}
 		});
 		vibratoAttack.setOnSeekBarChangeListener(this);
@@ -878,8 +884,8 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 		vibrato2SyncCheckBox.setOnCheckedChangeListener(new OnCheckedChangeListener() {
 			@Override
 			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-				synth.vibrato2Sync = isChecked;
-				synth.updateParams();
+				instrument.vibrato2Sync = isChecked;
+				instrument.updateParams();
 			}
 		});
 		vibrato2Attack.setOnSeekBarChangeListener(this);
@@ -912,8 +918,8 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 		sequenceLoopCheckBox.setOnCheckedChangeListener(new OnCheckedChangeListener() {
 			@Override
 			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-				synth.sequenceLoop = isChecked;
-				synth.updateParams();
+				instrument.sequenceLoop = isChecked;
+				instrument.updateParams();
 			}
 		});
 		keyboard.setOnTouchListener(this);
@@ -924,7 +930,6 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 
 	@Override
 	protected void onDestroy() {
-		synth.stop();
 		super.onDestroy();
 	}
 	
@@ -995,7 +1000,7 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 		public void run() {
 			try {
 				while (!stopThread) {
-					if (synth != null) {
+					if (instrument != null) {
 						final int time = synth.getRecordTime();
 						runOnUiThread(new Runnable() {
 							@Override
@@ -1231,16 +1236,17 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 
 	public void setMidiChannel(int midiChannel) {
 		this.myMidiChannel = midiChannel;
+		midi.setMidiChannel(midiChannel);
 	}
 
 	public void setTuning(int tuning) {
-		synth.tuning = tuning;
-		synth.updateParams();
+		instrument.tuning = tuning;
+		instrument.updateParams();
 	}
 
 	public void setTuningCents(int cents) {
-		synth.tuningCents = cents;
-		synth.updateParams();
+		instrument.tuningCents = cents;
+		instrument.updateParams();
 	}
 
 	public void updateSoundSpinner() {
@@ -1328,7 +1334,7 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 			public void onDismiss(DialogInterface dialog) {
 				if (promptForName.getButtonPressed() == 0) {
 					String soundName = promptForName.getValue();
-					Sound sound = synth.generateSound();
+					Sound sound = instrument.generateSound();
 					clientModel.saveObject(sound, soundName + ".wavesynth", true);
 					dirty = false;
 					System.out.println("Saved sound as " + soundName + ".wavesynth");
@@ -1359,7 +1365,7 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 	public void sendSound() {
 		final String soundName = (String) soundSpinner.getSelectedItem();
 		try {
-			Sound sound = synth.generateSound();
+			Sound sound = instrument.generateSound();
 
 //			File file = clientModel.exportObject(sound, soundName + ".easysynth");
 //			System.out.println("Exported sound as " + soundName + ".easysynth");
@@ -1524,7 +1530,11 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 					System.out.println("Saving recording to " + filename);
 
 					File file = new File(filename);
-					synth.saveRecording(filename);
+					try {
+						synth.saveRecording(new FileOutputStream(filename));
+					} catch (IOException e) {
+						throw new RuntimeException(e);
+					}
 					sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(file)));
 
 					System.out.println("Recording saved.");
@@ -1568,7 +1578,7 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 			return;
 		}
 		applyingASound = true;
-		synth.applySound(sound);
+		instrument.applySound(sound);
 		updateControls();
 		applyingASound = false;
 	}
@@ -1584,70 +1594,70 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 //				}
 				applyingASound = true;
 				// set the controls
-				if (synth.mode == 0) {
+				if (instrument.mode == 0) {
 					monoRadio.setChecked(true);
-				} else if (synth.mode == 1) {
+				} else if (instrument.mode == 1) {
 					polyRadio.setChecked(true);
-				} else if (synth.mode == 2) {
+				} else if (instrument.mode == 2) {
 					chorusRadio.setChecked(true);
 				}
-				chorusWidth.setProgress((int) Math.sqrt(synth.chorusWidth * 10000));
-				portamentoAmount.setProgress((int) (synth.portamentoAmount * 101));
-				velocitySpinner.setSelection(synth.velocityType);
-				expressionSpinner.setSelection(synth.expressionType);
-				if (synth.octave == 1) {
+				chorusWidth.setProgress((int) Math.sqrt(instrument.chorusWidth * 10000));
+				portamentoAmount.setProgress((int) (instrument.portamentoAmount * 101));
+				velocitySpinner.setSelection(instrument.velocityType);
+				expressionSpinner.setSelection(instrument.expressionType);
+				if (instrument.octave == 1) {
 					octave2Radio.setChecked(true);
-				} else if (synth.octave == 2) {
+				} else if (instrument.octave == 2) {
 					octave3Radio.setChecked(true);
-				} else if (synth.octave == 3) {
+				} else if (instrument.octave == 3) {
 					octave4Radio.setChecked(true);
-				} else if (synth.octave == 4) {
+				} else if (instrument.octave == 4) {
 					octave5Radio.setChecked(true);
-				} else if (synth.octave == 5) {
+				} else if (instrument.octave == 5) {
 					octave6Radio.setChecked(true);
 				}
-				keySpinner.setSelection(synth.key);
-				holdButton.setChecked(synth.hold);
-				harmonic1.setProgress((int) (Math.sqrt(synth.harmonics[0] * 20000)));
-				harmonic2.setProgress((int) (Math.sqrt(synth.harmonics[1] * 20000)));
-				harmonic3.setProgress((int) (Math.sqrt(synth.harmonics[2] * 20000)));
-				harmonic4.setProgress((int) (Math.sqrt(synth.harmonics[3] * 20000)));
-				harmonic5.setProgress((int) (Math.sqrt(synth.harmonics[4] * 20000)));
-				harmonic6.setProgress((int) (Math.sqrt(synth.harmonics[5] * 20000)));
-				harmonic7.setProgress((int) (Math.sqrt(synth.harmonics[6] * 20000)));
-				harmonic8.setProgress((int) (Math.sqrt(synth.harmonics[7] * 20000)));
-				harmonic9.setProgress((int) (Math.sqrt(synth.harmonics[8] * 20000)));
-				harmonic10.setProgress((int) (Math.sqrt(synth.harmonics[9] * 20000)));
-				harmonic11.setProgress((int) (Math.sqrt(synth.harmonics[10] * 20000)));
-				harmonic12.setProgress((int) (Math.sqrt(synth.harmonics[11] * 20000)));
-				if (synth.harmonics.length > 12) {
-					harmonic13.setProgress((int) (Math.sqrt(synth.harmonics[12] * 20000)));
-					harmonic14.setProgress((int) (Math.sqrt(synth.harmonics[13] * 20000)));
-					harmonic15.setProgress((int) (Math.sqrt(synth.harmonics[14] * 20000)));
-					harmonic16.setProgress((int) (Math.sqrt(synth.harmonics[15] * 20000)));
+				keySpinner.setSelection(instrument.key);
+				holdButton.setChecked(instrument.hold);
+				harmonic1.setProgress((int) (Math.sqrt(instrument.harmonics[0] * 20000)));
+				harmonic2.setProgress((int) (Math.sqrt(instrument.harmonics[1] * 20000)));
+				harmonic3.setProgress((int) (Math.sqrt(instrument.harmonics[2] * 20000)));
+				harmonic4.setProgress((int) (Math.sqrt(instrument.harmonics[3] * 20000)));
+				harmonic5.setProgress((int) (Math.sqrt(instrument.harmonics[4] * 20000)));
+				harmonic6.setProgress((int) (Math.sqrt(instrument.harmonics[5] * 20000)));
+				harmonic7.setProgress((int) (Math.sqrt(instrument.harmonics[6] * 20000)));
+				harmonic8.setProgress((int) (Math.sqrt(instrument.harmonics[7] * 20000)));
+				harmonic9.setProgress((int) (Math.sqrt(instrument.harmonics[8] * 20000)));
+				harmonic10.setProgress((int) (Math.sqrt(instrument.harmonics[9] * 20000)));
+				harmonic11.setProgress((int) (Math.sqrt(instrument.harmonics[10] * 20000)));
+				harmonic12.setProgress((int) (Math.sqrt(instrument.harmonics[11] * 20000)));
+				if (instrument.harmonics.length > 12) {
+					harmonic13.setProgress((int) (Math.sqrt(instrument.harmonics[12] * 20000)));
+					harmonic14.setProgress((int) (Math.sqrt(instrument.harmonics[13] * 20000)));
+					harmonic15.setProgress((int) (Math.sqrt(instrument.harmonics[14] * 20000)));
+					harmonic16.setProgress((int) (Math.sqrt(instrument.harmonics[15] * 20000)));
 				} else {
 					harmonic13.setProgress(0);
 					harmonic14.setProgress(0);
 					harmonic15.setProgress(0);
 					harmonic16.setProgress(0);
 				}
-				if (synth.harmonics.length > 16) {
-					harmonic17.setProgress((int) (Math.sqrt(synth.harmonics[16] * 20000)));
-					harmonic18.setProgress((int) (Math.sqrt(synth.harmonics[17] * 20000)));
-					harmonic19.setProgress((int) (Math.sqrt(synth.harmonics[18] * 20000)));
-					harmonic20.setProgress((int) (Math.sqrt(synth.harmonics[19] * 20000)));
-					harmonic21.setProgress((int) (Math.sqrt(synth.harmonics[20] * 20000)));
-					harmonic22.setProgress((int) (Math.sqrt(synth.harmonics[21] * 20000)));
-					harmonic23.setProgress((int) (Math.sqrt(synth.harmonics[22] * 20000)));
-					harmonic24.setProgress((int) (Math.sqrt(synth.harmonics[23] * 20000)));
-					harmonic25.setProgress((int) (Math.sqrt(synth.harmonics[24] * 20000)));
-					harmonic26.setProgress((int) (Math.sqrt(synth.harmonics[25] * 20000)));
-					harmonic27.setProgress((int) (Math.sqrt(synth.harmonics[26] * 20000)));
-					harmonic28.setProgress((int) (Math.sqrt(synth.harmonics[27] * 20000)));
-					harmonic29.setProgress((int) (Math.sqrt(synth.harmonics[28] * 20000)));
-					harmonic30.setProgress((int) (Math.sqrt(synth.harmonics[29] * 20000)));
-					harmonic31.setProgress((int) (Math.sqrt(synth.harmonics[30] * 20000)));
-					harmonic32.setProgress((int) (Math.sqrt(synth.harmonics[31] * 20000)));
+				if (instrument.harmonics.length > 16) {
+					harmonic17.setProgress((int) (Math.sqrt(instrument.harmonics[16] * 20000)));
+					harmonic18.setProgress((int) (Math.sqrt(instrument.harmonics[17] * 20000)));
+					harmonic19.setProgress((int) (Math.sqrt(instrument.harmonics[18] * 20000)));
+					harmonic20.setProgress((int) (Math.sqrt(instrument.harmonics[19] * 20000)));
+					harmonic21.setProgress((int) (Math.sqrt(instrument.harmonics[20] * 20000)));
+					harmonic22.setProgress((int) (Math.sqrt(instrument.harmonics[21] * 20000)));
+					harmonic23.setProgress((int) (Math.sqrt(instrument.harmonics[22] * 20000)));
+					harmonic24.setProgress((int) (Math.sqrt(instrument.harmonics[23] * 20000)));
+					harmonic25.setProgress((int) (Math.sqrt(instrument.harmonics[24] * 20000)));
+					harmonic26.setProgress((int) (Math.sqrt(instrument.harmonics[25] * 20000)));
+					harmonic27.setProgress((int) (Math.sqrt(instrument.harmonics[26] * 20000)));
+					harmonic28.setProgress((int) (Math.sqrt(instrument.harmonics[27] * 20000)));
+					harmonic29.setProgress((int) (Math.sqrt(instrument.harmonics[28] * 20000)));
+					harmonic30.setProgress((int) (Math.sqrt(instrument.harmonics[29] * 20000)));
+					harmonic31.setProgress((int) (Math.sqrt(instrument.harmonics[30] * 20000)));
+					harmonic32.setProgress((int) (Math.sqrt(instrument.harmonics[31] * 20000)));
 				} else {
 					harmonic17.setProgress(0);
 					harmonic18.setProgress(0);
@@ -1666,49 +1676,49 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 					harmonic31.setProgress(0);
 					harmonic32.setProgress(0);
 				}
-				if (synth.filterType == WaveSynth.FILTER_LOWPASS) {
+				if (instrument.filterType == WaveSynth.FILTER_LOWPASS) {
 					filterTypeSpinner.setSelection(0);
-				} else if (synth.filterType == WaveSynth.FILTER_BANDPASS) {
+				} else if (instrument.filterType == WaveSynth.FILTER_BANDPASS) {
 					filterTypeSpinner.setSelection(1);
-				} else if (synth.filterType == WaveSynth.FILTER_FADE) {
+				} else if (instrument.filterType == WaveSynth.FILTER_FADE) {
 					filterTypeSpinner.setSelection(3);
-				} else if (synth.filterType == WaveSynth.FILTER_HIGHPASS) {
+				} else if (instrument.filterType == WaveSynth.FILTER_HIGHPASS) {
 					filterTypeSpinner.setSelection(2);
-				} else if (synth.filterType == WaveSynth.FILTER_COMB1) {
+				} else if (instrument.filterType == WaveSynth.FILTER_COMB1) {
 					filterTypeSpinner.setSelection(4);
-				} else if (synth.filterType == WaveSynth.FILTER_COMB2) {
+				} else if (instrument.filterType == WaveSynth.FILTER_COMB2) {
 					filterTypeSpinner.setSelection(5);
-				} else if (synth.filterType == WaveSynth.FILTER_COMB3) {
+				} else if (instrument.filterType == WaveSynth.FILTER_COMB3) {
 					filterTypeSpinner.setSelection(6);
-				} else if (synth.filterType == WaveSynth.FILTER_COMB4) {
+				} else if (instrument.filterType == WaveSynth.FILTER_COMB4) {
 					filterTypeSpinner.setSelection(7);
-				} else if (synth.filterType == WaveSynth.FILTER_FORMANT1) {
+				} else if (instrument.filterType == WaveSynth.FILTER_FORMANT1) {
 					filterTypeSpinner.setSelection(8);
-				} else if (synth.filterType == WaveSynth.FILTER_FORMANT2) {
+				} else if (instrument.filterType == WaveSynth.FILTER_FORMANT2) {
 					filterTypeSpinner.setSelection(9);
-				} else if (synth.filterType == WaveSynth.FILTER_FORMANT3) {
+				} else if (instrument.filterType == WaveSynth.FILTER_FORMANT3) {
 					filterTypeSpinner.setSelection(10);
-				} else if (synth.filterType == WaveSynth.FILTER_FORMANT4) {
+				} else if (instrument.filterType == WaveSynth.FILTER_FORMANT4) {
 					filterTypeSpinner.setSelection(11);
 				}
-				filterResonance.setProgress((int) (synth.filterResonance * 100));
-				filterLow.setProgress((int) (synth.filterLow * 100));
-				filterHigh.setProgress((int) (synth.filterHigh * 100));
-				filterEnvAttack.setProgress((int) (Math.sqrt((synth.filterEnvAttack) * 50)));
-				filterEnvDecay.setProgress((int) (Math.sqrt((synth.filterEnvDecay) * 50)));
-				filterEnvSustain.setProgress((int) (synth.filterEnvSustain * 100));
-				filterEnvRelease.setProgress((int) (Math.sqrt((synth.filterEnvRelease) * 50)));
-				ampVolume.setProgress((int) (synth.ampVolume * 100));
-				ampAttack.setProgress((int) (Math.sqrt((synth.ampAttack) * 50)));
-				ampDecay.setProgress((int) (Math.sqrt((synth.ampDecay) * 50)));
-				ampSustain.setProgress((int) (synth.ampSustain * 100));
-				ampRelease.setProgress((int) (Math.sqrt((synth.ampRelease) * 50)));
-				ampOverdrive.setProgress(synth.ampOverdrive);
-				ampOverdrivePerVoiceCheckBox.setChecked(synth.ampOverdrivePerVoice);
-				vibratoDestinationSpinner.setSelection(synth.vibratoDestination);
-				vibratoTypeSpinner.setSelection(synth.vibratoType);
-				vibratoAmount.setProgress((int) (Math.sqrt(synth.vibratoAmount * 25000)));
-				vibratoRate.setProgress((int) (Math.pow((synth.vibratoRate - 1) * 1000, 1.0 / 3))); // synth.vibratoRate
+				filterResonance.setProgress((int) (instrument.filterResonance * 100));
+				filterLow.setProgress((int) (instrument.filterLow * 100));
+				filterHigh.setProgress((int) (instrument.filterHigh * 100));
+				filterEnvAttack.setProgress((int) (Math.sqrt((instrument.filterEnvAttack) * 50)));
+				filterEnvDecay.setProgress((int) (Math.sqrt((instrument.filterEnvDecay) * 50)));
+				filterEnvSustain.setProgress((int) (instrument.filterEnvSustain * 100));
+				filterEnvRelease.setProgress((int) (Math.sqrt((instrument.filterEnvRelease) * 50)));
+				ampVolume.setProgress((int) (instrument.ampVolume * 100));
+				ampAttack.setProgress((int) (Math.sqrt((instrument.ampAttack) * 50)));
+				ampDecay.setProgress((int) (Math.sqrt((instrument.ampDecay) * 50)));
+				ampSustain.setProgress((int) (instrument.ampSustain * 100));
+				ampRelease.setProgress((int) (Math.sqrt((instrument.ampRelease) * 50)));
+				ampOverdrive.setProgress(instrument.ampOverdrive);
+				ampOverdrivePerVoiceCheckBox.setChecked(instrument.ampOverdrivePerVoice);
+				vibratoDestinationSpinner.setSelection(instrument.vibratoDestination);
+				vibratoTypeSpinner.setSelection(instrument.vibratoType);
+				vibratoAmount.setProgress((int) (Math.sqrt(instrument.vibratoAmount * 25000)));
+				vibratoRate.setProgress((int) (Math.pow((instrument.vibratoRate - 1) * 1000, 1.0 / 3))); // synth.vibratoRate
 																									// =
 																									// progress
 																									// *
@@ -1719,13 +1729,13 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 																									// 1000.0f
 																									// +
 																									// 1;
-				vibratoSyncCheckBox.setChecked(synth.vibratoSync);
-				vibratoAttack.setProgress((int) (Math.sqrt((synth.vibratoAttack) * 50)));
-				vibratoDecay.setProgress((int) (Math.sqrt((synth.vibratoDecay) * 50)));
-				vibrato2DestinationSpinner.setSelection(synth.vibrato2Destination);
-				vibrato2TypeSpinner.setSelection(synth.vibrato2Type);
-				vibrato2Amount.setProgress((int) (Math.sqrt(synth.vibrato2Amount * 25000)));
-				vibrato2Rate.setProgress((int) (Math.pow((synth.vibrato2Rate - 1) * 1000, 1.0 / 3))); // synth.vibrato2Rate
+				vibratoSyncCheckBox.setChecked(instrument.vibratoSync);
+				vibratoAttack.setProgress((int) (Math.sqrt((instrument.vibratoAttack) * 50)));
+				vibratoDecay.setProgress((int) (Math.sqrt((instrument.vibratoDecay) * 50)));
+				vibrato2DestinationSpinner.setSelection(instrument.vibrato2Destination);
+				vibrato2TypeSpinner.setSelection(instrument.vibrato2Type);
+				vibrato2Amount.setProgress((int) (Math.sqrt(instrument.vibrato2Amount * 25000)));
+				vibrato2Rate.setProgress((int) (Math.pow((instrument.vibrato2Rate - 1) * 1000, 1.0 / 3))); // synth.vibrato2Rate
 																										// =
 																										// progress
 																										// *
@@ -1736,39 +1746,39 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 																										// 1000.0f
 																										// +
 																										// 1;
-				vibrato2SyncCheckBox.setChecked(synth.vibrato2Sync);
-				vibrato2Attack.setProgress((int) (Math.sqrt((synth.vibrato2Attack) * 50)));
-				vibrato2Decay.setProgress((int) (Math.sqrt((synth.vibrato2Decay) * 50)));
-				echoAmount.setProgress((int) (synth.echoAmount * 100));
-				echoDelay.setProgress((int) (Math.sqrt((synth.echoDelay * 10201))));
-				echoFeedback.setProgress((int) (synth.echoFeedback * 101));
-				flangeAmount.setProgress((int) (synth.flangeAmount * 100));
-				flangeRate.setProgress((int) (synth.flangeRate * 100));
-				sequence1.setProgress((synth.sequence[0]));
-				sequence2.setProgress((synth.sequence[1]));
-				sequence3.setProgress((synth.sequence[2]));
-				sequence4.setProgress((synth.sequence[3]));
-				sequence5.setProgress((synth.sequence[4]));
-				sequence6.setProgress((synth.sequence[5]));
-				sequence7.setProgress((synth.sequence[6]));
-				sequence8.setProgress((synth.sequence[7]));
-				if (synth.sequence.length > 8) {
-					sequence1.setProgress((synth.sequence[0]));
-					sequence2.setProgress((synth.sequence[1]));
-					sequence3.setProgress((synth.sequence[2]));
-					sequence4.setProgress((synth.sequence[3]));
-					sequence5.setProgress((synth.sequence[4]));
-					sequence6.setProgress((synth.sequence[5]));
-					sequence7.setProgress((synth.sequence[6]));
-					sequence8.setProgress((synth.sequence[7]));
-					sequence9.setProgress((synth.sequence[8]));
-					sequence10.setProgress((synth.sequence[9]));
-					sequence11.setProgress((synth.sequence[10]));
-					sequence12.setProgress((synth.sequence[11]));
-					sequence13.setProgress((synth.sequence[12]));
-					sequence14.setProgress((synth.sequence[13]));
-					sequence15.setProgress((synth.sequence[14]));
-					sequence16.setProgress((synth.sequence[15]));
+				vibrato2SyncCheckBox.setChecked(instrument.vibrato2Sync);
+				vibrato2Attack.setProgress((int) (Math.sqrt((instrument.vibrato2Attack) * 50)));
+				vibrato2Decay.setProgress((int) (Math.sqrt((instrument.vibrato2Decay) * 50)));
+				echoAmount.setProgress((int) (instrument.echoAmount * 100));
+				echoDelay.setProgress((int) (Math.sqrt((instrument.echoDelay * 10201))));
+				echoFeedback.setProgress((int) (instrument.echoFeedback * 101));
+				flangeAmount.setProgress((int) (instrument.flangeAmount * 100));
+				flangeRate.setProgress((int) (instrument.flangeRate * 100));
+				sequence1.setProgress((instrument.sequence[0]));
+				sequence2.setProgress((instrument.sequence[1]));
+				sequence3.setProgress((instrument.sequence[2]));
+				sequence4.setProgress((instrument.sequence[3]));
+				sequence5.setProgress((instrument.sequence[4]));
+				sequence6.setProgress((instrument.sequence[5]));
+				sequence7.setProgress((instrument.sequence[6]));
+				sequence8.setProgress((instrument.sequence[7]));
+				if (instrument.sequence.length > 8) {
+					sequence1.setProgress((instrument.sequence[0]));
+					sequence2.setProgress((instrument.sequence[1]));
+					sequence3.setProgress((instrument.sequence[2]));
+					sequence4.setProgress((instrument.sequence[3]));
+					sequence5.setProgress((instrument.sequence[4]));
+					sequence6.setProgress((instrument.sequence[5]));
+					sequence7.setProgress((instrument.sequence[6]));
+					sequence8.setProgress((instrument.sequence[7]));
+					sequence9.setProgress((instrument.sequence[8]));
+					sequence10.setProgress((instrument.sequence[9]));
+					sequence11.setProgress((instrument.sequence[10]));
+					sequence12.setProgress((instrument.sequence[11]));
+					sequence13.setProgress((instrument.sequence[12]));
+					sequence14.setProgress((instrument.sequence[13]));
+					sequence15.setProgress((instrument.sequence[14]));
+					sequence16.setProgress((instrument.sequence[15]));
 				} else {
 					sequence9.setProgress(0);
 					sequence10.setProgress(0);
@@ -1780,8 +1790,8 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 					sequence16.setProgress(0);
 				}
 				// sequenceRate.setProgress((int) synth.sequenceRate);
-				sequenceRateTextView.setText(String.valueOf((int) synth.sequenceRate));
-				sequenceLoopCheckBox.setChecked(synth.sequenceLoop);
+				sequenceRateTextView.setText(String.valueOf((int) instrument.sequenceRate));
+				sequenceLoopCheckBox.setChecked(instrument.sequenceLoop);
 
 				applyingASound = false;
 			}
@@ -1790,6 +1800,7 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 
 	@Override
 	protected void onStart() {
+		System.out.println(">MainActivity.start");
 		super.onStart();
 		if (getIntent().getData() != null) {
 			System.out.println("Invocation params: " + getIntent().getData());
@@ -1797,16 +1808,28 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 		}
 		wakelock.acquire();
 		soundLoadTime = System.currentTimeMillis();
-		synth.start();
+		try {
+			synth.start();
+			synth.setInstrument(instrument);
+			midi.start();
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		} finally {
+			System.out.println("<MainActivity.start");
+		}
 	}
 
 	@Override
 	protected void onStop() {
+		System.out.println(">MainActivity.stop");
 		super.onStop();
 		if (updateThread != null) {
 			stopRecording();
 		}
 		wakelock.release();
+		midi.stop();
+		synth.stop();
+		System.out.println("<MainActivity.stop");
 	}
 
 	@Override
@@ -1857,13 +1880,13 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 		y += keyboardLocation[1];
 		if (event.getActionMasked() == MotionEvent.ACTION_DOWN || event.getActionMasked() == MotionEvent.ACTION_POINTER_DOWN) {
 			if (v == sequenceRateUpButton) {
-				synth.sequenceRate = Math.min(1000, synth.sequenceRate + 1);
-				synth.updateParams();
+				instrument.sequenceRate = Math.min(1000, instrument.sequenceRate + 1);
+				instrument.updateParams();
 				updateControls();
 				startAutoRepeat(v);
 			} else if (v == sequenceRateDownButton) {
-				synth.sequenceRate = Math.max(0, synth.sequenceRate - 1);
-				synth.updateParams();
+				instrument.sequenceRate = Math.max(0, instrument.sequenceRate - 1);
+				instrument.updateParams();
 				updateControls();
 				startAutoRepeat(v);
 			} else {
@@ -1913,11 +1936,11 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 					sleepTime = Math.max(10, (int) (sleepTime * 0.95f));
 					if (!stoppit) {
 						if (v == sequenceRateUpButton) {
-							synth.sequenceRate = Math.min(1000, synth.sequenceRate + 1);
+							instrument.sequenceRate = Math.min(1000, instrument.sequenceRate + 1);
 						} else if (v == sequenceRateDownButton) {
-							synth.sequenceRate = Math.max(0, synth.sequenceRate - 1);
+							instrument.sequenceRate = Math.max(0, instrument.sequenceRate - 1);
 						}
-						synth.updateParams();
+						instrument.updateParams();
 						MainActivity.this.runOnUiThread(new Runnable() {
 							@Override
 							public void run() {
@@ -2069,7 +2092,7 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 
 		int voice = 1;
 
-		if (synth.mode == WaveSynth.MODE_MONOPHONIC) {
+		if (instrument.mode == WaveSynth.MODE_MONOPHONIC) {
 			if (type == PRESS) {
 				keyPress(1, note, velocity);
 				initialX = x;
@@ -2082,15 +2105,15 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 				}
 			} else if (type == SLIDE) {
 				if (note != lastNote[finger]) {
-					synth.keyRelease(1);
+					instrument.keyRelease(1);
 					getKeyForNote(lastNote[finger]).setPressed(false);
-					synth.keyPress(1, note, velocity, true, false);
+					instrument.keyPress(1, note, velocity, true, false);
 					getKeyForNote(note).setPressed(true);
 				} else {
-					synth.expression(FastMath.max(0, initialY - y) / keyboard.getHeight());
+					instrument.expression(FastMath.max(0, initialY - y) / keyboard.getHeight());
 				}
 			}
-		} else if (synth.mode == WaveSynth.MODE_CHORUS) {
+		} else if (instrument.mode == WaveSynth.MODE_CHORUS) {
 			if (type == PRESS) {
 				keyPress(1, note, velocity);
 				initialX = x;
@@ -2103,19 +2126,19 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 				}
 			} else if (type == SLIDE) {
 				if (note != lastNote[finger]) {
-					synth.keyRelease(1);
-					synth.keyRelease(2);
-					synth.keyRelease(3);
-					synth.keyRelease(4);
+					instrument.keyRelease(1);
+					instrument.keyRelease(2);
+					instrument.keyRelease(3);
+					instrument.keyRelease(4);
 					getKeyForNote(lastNote[finger]).dispatchTouchEvent(MotionEvent.obtain(SystemClock.uptimeMillis(), SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, 0, 0, 0));
-					synth.keyPress(1, note, velocity, true, false);
+					instrument.keyPress(1, note, velocity, true, false);
 					getKeyForNote(note).dispatchTouchEvent(MotionEvent.obtain(SystemClock.uptimeMillis(), SystemClock.uptimeMillis(), MotionEvent.ACTION_DOWN, 0, 0, 0));
 				} else {
-					synth.expression(FastMath.max(0, initialY - y) / keyboard.getHeight());
+					instrument.expression(FastMath.max(0, initialY - y) / keyboard.getHeight());
 				}
 			}
 		} else { // polyphonic
-			voice = synth.getVoice(note);
+			voice = instrument.getVoice(note);
 			if (type == PRESS) {
 				keyPress(voice, note, velocity);
 			} else if (type == RELEASE) {
@@ -2125,7 +2148,7 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 					if (lastVoice[finger] != voice) {
 						keyRelease(lastVoice[finger], lastNote[finger]);
 						getKeyForNote(lastNote[finger]).dispatchTouchEvent(MotionEvent.obtain(SystemClock.uptimeMillis(), SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, 0, 0, 0));
-						synth.keyPress(voice, note, velocity, true, false);
+						instrument.keyPress(voice, note, velocity, true, false);
 						getKeyForNote(note).dispatchTouchEvent(MotionEvent.obtain(SystemClock.uptimeMillis(), SystemClock.uptimeMillis(), MotionEvent.ACTION_DOWN, 0, 0, 0));
 					}
 				}
@@ -2146,20 +2169,20 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 	private void keyPress(int voice, int note, float velocity) {
 		if (holdButton.isChecked()) {
 			if (!keyHeld[note]) {
-				synth.expression(0);
-				synth.keyPress(voice, note, velocity, false, true);
-				if (synth.mode != WaveSynth.MODE_POLYPHONIC) {
+				instrument.expression(0);
+				instrument.keyPress(voice, note, velocity, false, true);
+				if (instrument.mode != WaveSynth.MODE_POLYPHONIC) {
 					clearHolds();
 				}
 				keyHeld[note] = true;
 			} else {
-				synth.keyRelease(voice);
+				instrument.keyRelease(voice);
 				keyHeld[note] = false;
 			}
 			showHolds();
 		} else {
-			synth.expression(0);
-			synth.keyPress(voice, note, velocity, false, true);
+			instrument.expression(0);
+			instrument.keyPress(voice, note, velocity, false, true);
 		}
 		getKeyForNote(note).setPressed(true);
 	}
@@ -2167,7 +2190,7 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 	@SuppressLint("NewApi")
 	private void keyRelease(int voice, int note) {
 		if (!holdButton.isChecked()) {
-			synth.keyRelease(voice);
+			instrument.keyRelease(voice);
 		}
 		getKeyForNote(note).setPressed(false);
 	}
@@ -2263,23 +2286,23 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 	public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
 		if (isChecked) {
 			if (buttonView == monoRadio) {
-				synth.mode = 0;
+				instrument.mode = 0;
 			} else if (buttonView == polyRadio) {
-				synth.mode = 1;
+				instrument.mode = 1;
 			} else if (buttonView == chorusRadio) {
-				synth.mode = 2;
+				instrument.mode = 2;
 			} else if (buttonView == octave2Radio) {
-				synth.octave = 1;
+				instrument.octave = 1;
 			} else if (buttonView == octave3Radio) {
-				synth.octave = 2;
+				instrument.octave = 2;
 			} else if (buttonView == octave4Radio) {
-				synth.octave = 3;
+				instrument.octave = 3;
 			} else if (buttonView == octave5Radio) {
-				synth.octave = 4;
+				instrument.octave = 4;
 			} else if (buttonView == octave6Radio) {
-				synth.octave = 5;
+				instrument.octave = 5;
 			}
-			synth.updateParams();
+			instrument.updateParams();
 		}
 	}
 
@@ -2289,7 +2312,7 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 			return;
 		}
 		if (seekBar == chorusWidth) {
-			synth.chorusWidth = progress * progress / 10000.0f;
+			instrument.chorusWidth = progress * progress / 10000.0f;
 		} else if (seekBar == harmonic1) {
 			updateWaves();
 		} else if (seekBar == harmonic2) {
@@ -2355,69 +2378,69 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 		} else if (seekBar == harmonic32) {
 			updateWaves();
 		} else if (seekBar == filterResonance) {
-			synth.filterResonance = progress / 100.0f;
+			instrument.filterResonance = progress / 100.0f;
 			updateWaves();
 		} else if (seekBar == filterLow) {
-			synth.filterLow = progress / 100.0f;
+			instrument.filterLow = progress / 100.0f;
 		} else if (seekBar == filterHigh) {
-			synth.filterHigh = progress / 100.0f;
+			instrument.filterHigh = progress / 100.0f;
 		} else if (seekBar == filterEnvAttack) {
-			synth.filterEnvAttack = progress * progress / 50.0f;
+			instrument.filterEnvAttack = progress * progress / 50.0f;
 		} else if (seekBar == filterEnvDecay) {
-			synth.filterEnvDecay = progress * progress / 50.0f;
+			instrument.filterEnvDecay = progress * progress / 50.0f;
 		} else if (seekBar == filterEnvSustain) {
-			synth.filterEnvSustain = progress / 100.0f;
+			instrument.filterEnvSustain = progress / 100.0f;
 		} else if (seekBar == filterEnvRelease) {
-			synth.filterEnvRelease = progress * progress / 50.0f;
+			instrument.filterEnvRelease = progress * progress / 50.0f;
 		} else if (seekBar == ampVolume) {
-			synth.ampVolume = progress / 100.0f;
+			instrument.ampVolume = progress / 100.0f;
 		} else if (seekBar == ampAttack) {
-			synth.ampAttack = progress * progress / 50.0f;
+			instrument.ampAttack = progress * progress / 50.0f;
 		} else if (seekBar == ampDecay) {
 			if (progress >= 99) {
 				progress = 1000; // make it near infinite
 			}
-			synth.ampDecay = progress * progress / 50.0f;
+			instrument.ampDecay = progress * progress / 50.0f;
 		} else if (seekBar == ampSustain) {
-			synth.ampSustain = progress / 100.0f;
+			instrument.ampSustain = progress / 100.0f;
 		} else if (seekBar == ampRelease) {
-			synth.ampRelease = progress * progress / 50.0f;
+			instrument.ampRelease = progress * progress / 50.0f;
 		} else if (seekBar == ampOverdrive) {
-			synth.ampOverdrive = progress;
+			instrument.ampOverdrive = progress;
 		} else if (seekBar == vibratoAmount) {
-			synth.vibratoAmount = progress * progress / 25000.0f;
+			instrument.vibratoAmount = progress * progress / 25000.0f;
 		} else if (seekBar == vibratoRate) {
-			synth.vibratoRate = progress * progress * progress / 1000.0f + 1;
+			instrument.vibratoRate = progress * progress * progress / 1000.0f + 1;
 		} else if (seekBar == vibratoAttack) {
-			synth.vibratoAttack = progress * progress / 50.0f;
+			instrument.vibratoAttack = progress * progress / 50.0f;
 		} else if (seekBar == vibratoDecay) {
 			if (progress >= 99) {
 				progress = 1000; // make it near infinite
 			}
-			synth.vibratoDecay = progress * progress / 50.0f;
+			instrument.vibratoDecay = progress * progress / 50.0f;
 		} else if (seekBar == vibrato2Amount) {
-			synth.vibrato2Amount = progress * progress / 25000.0f;
+			instrument.vibrato2Amount = progress * progress / 25000.0f;
 		} else if (seekBar == vibrato2Rate) {
-			synth.vibrato2Rate = progress * progress * progress / 1000.0f + 1;
+			instrument.vibrato2Rate = progress * progress * progress / 1000.0f + 1;
 		} else if (seekBar == vibrato2Attack) {
-			synth.vibrato2Attack = progress * progress / 50.0f;
+			instrument.vibrato2Attack = progress * progress / 50.0f;
 		} else if (seekBar == vibrato2Decay) {
 			if (progress >= 99) {
 				progress = 1000; // make it near infinite
 			}
-			synth.vibrato2Decay = progress * progress / 50.0f;
+			instrument.vibrato2Decay = progress * progress / 50.0f;
 		} else if (seekBar == echoAmount) {
-			synth.echoAmount = progress / 100.0f;
+			instrument.echoAmount = progress / 100.0f;
 		} else if (seekBar == echoDelay) {
-			synth.echoDelay = progress * progress / 10201.0f;
+			instrument.echoDelay = progress * progress / 10201.0f;
 		} else if (seekBar == echoFeedback) {
-			synth.echoFeedback = progress / 101.0f; // avoid growing
+			instrument.echoFeedback = progress / 101.0f; // avoid growing
 		} else if (seekBar == flangeAmount) {
-			synth.flangeAmount = progress / 100.0f;
+			instrument.flangeAmount = progress / 100.0f;
 		} else if (seekBar == flangeRate) {
-			synth.flangeRate = progress / 100.0f;
+			instrument.flangeRate = progress / 100.0f;
 		} else if (seekBar == portamentoAmount) {
-			synth.portamentoAmount = progress / 101.0f;
+			instrument.portamentoAmount = progress / 101.0f;
 		} else if (seekBar == sequence1) {
 			updateSequence();
 		} else if (seekBar == sequence2) {
@@ -2453,7 +2476,7 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 			// } else if (seekBar == sequenceRate) {
 			// synth.sequenceRate = progress;
 		}
-		synth.updateParams();
+		instrument.updateParams();
 		dirty = true;
 	}
 
@@ -2491,8 +2514,8 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 		harmonics[29] = harmonic30.getProgress() * harmonic30.getProgress() / 20000.0f;
 		harmonics[30] = harmonic31.getProgress() * harmonic31.getProgress() / 20000.0f;
 		harmonics[31] = harmonic32.getProgress() * harmonic32.getProgress() / 20000.0f;
-		synth.harmonics = harmonics;
-		synth.genWaves();
+		instrument.harmonics = harmonics;
+		instrument.genWaves();
 	}
 
 	public void updateSequence() {
@@ -2513,8 +2536,8 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 		sequence[13] = sequence14.getProgress();
 		sequence[14] = sequence15.getProgress();
 		sequence[15] = sequence16.getProgress();
-		synth.sequence = sequence;
-		synth.updateSequence();
+		instrument.sequence = sequence;
+		instrument.updateSequence();
 	}
 
 	@Override
@@ -2630,9 +2653,9 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 		if (function == 0) { // ?
 		} else if (function == 1) { // modulation amount
 			// float currentVibratoAmount = progress * progress / 25000.0f;
-			synth.expression(value / 128.0f);
+			instrument.expression(value / 128.0f);
 		} else if (function == 3) { // chorus (pulse) width
-			synth.chorusWidth = value / 128.0f;
+			instrument.chorusWidth = value / 128.0f;
 			updateControls();
 		} else if (function == 7) { // overall volume
 			AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
@@ -2640,111 +2663,111 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 		} else if (function == 10) { // pan
 			// doesn't exist
 		} else if (function == 14) { // amp level
-			synth.ampVolume = value / 128.0f;
+			instrument.ampVolume = value / 128.0f;
 			updateControls();
 		} else if (function == 16) { // vibrato rate
-			synth.vibratoRate = value;
+			instrument.vibratoRate = value;
 			updateControls();
 		} else if (function == 17) { // tremelo rate (actually lfo2)
 			// doesn't exist
 		} else if (function == 18) { // vibrato amount
-			synth.vibratoAmount = value / 128.0f;
+			instrument.vibratoAmount = value / 128.0f;
 			updateControls();
 		} else if (function == 22) { // tremelo amount (actually lfo2)
 			// doesn't exist
 		} else if (function == 28) { // filter sustain
-			synth.filterEnvSustain = value / 128.0f;
+			instrument.filterEnvSustain = value / 128.0f;
 			updateControls();
 		} else if (function == 29) { // filter release
-			synth.filterEnvRelease = value;
+			instrument.filterEnvRelease = value;
 			updateControls();
 		} else if (function == 31) { // amp sustain
-			synth.ampSustain = value / 128.0f;
+			instrument.ampSustain = value / 128.0f;
 			updateControls();
 		} else if (function == 64) { // damper pedal
 			if (value > 0) {
-				synth.ampRelease = synth.ampDecay;
+				instrument.ampRelease = instrument.ampDecay;
 			} else {
-				synth.ampRelease = sound.ampRelease;
+				instrument.ampRelease = sound.ampRelease;
 			}
 		} else if (function == 70) {
 
 		} else if (function == 71) { // filter resonance
-			synth.filterResonance = value / 128.0f;
-			synth.genWaves();
+			instrument.filterResonance = value / 128.0f;
+			instrument.genWaves();
 			updateControls();
 		} else if (function == 72) { // amp release
-			synth.ampRelease = value;
+			instrument.ampRelease = value;
 			updateControls();
 		} else if (function == 73) { // amp attack
-			synth.ampAttack = value;
+			instrument.ampAttack = value;
 			updateControls();
 		} else if (function == 74) { // filter cutoff
-			synth.filterLow = value / 128.0f;
+			instrument.filterLow = value / 128.0f;
 			updateControls();
 		} else if (function == 75) { // amp decay
-			synth.ampDecay = value;
+			instrument.ampDecay = value;
 			updateControls();
 		} else if (function == 76) { // vibrato rate
-			synth.vibratoRate = value / 128.0f;
+			instrument.vibratoRate = value / 128.0f;
 			updateControls();
 		} else if (function == 77) { // vibrato amount
-			synth.vibratoAmount = value / 128.0f;
+			instrument.vibratoAmount = value / 128.0f;
 			updateControls();
 		} else if (function == 78) { // vibrato attack
-			synth.vibratoAttack = value;
+			instrument.vibratoAttack = value;
 			updateControls();
 		} else if (function == 81) { // filter depth
-			synth.filterHigh = value / 128.0f;
+			instrument.filterHigh = value / 128.0f;
 			updateControls();
 		} else if (function == 82) { // filter attack
-			synth.filterEnvAttack = value;
+			instrument.filterEnvAttack = value;
 			updateControls();
 		} else if (function == 83) { // filter decay
-			synth.filterEnvDecay = value;
+			instrument.filterEnvDecay = value;
 			updateControls();
 		} else if (function == 91) { // reverb amount
-			synth.echoFeedback = value / 128.0f;
+			instrument.echoFeedback = value / 128.0f;
 			updateControls();
 		} else if (function == 93) { // chorus amount
-			synth.echoAmount = value / 128.0f;
+			instrument.echoAmount = value / 128.0f;
 			updateControls();
 		}
 
 		// Special commands
 		else if (function == 120) { // all sound off
-			synth.allSoundOff();
+			instrument.allSoundOff();
 		} else if (function == 121) { // reset all controllers
 			// not implemented
 		} else if (function == 122) { // local control
 			// not implemented
 		} else if (function == 123) { // all notes off
-			synth.keyRelease(1);
-			synth.keyRelease(2);
-			synth.keyRelease(3);
-			synth.keyRelease(4);
+			instrument.keyRelease(1);
+			instrument.keyRelease(2);
+			instrument.keyRelease(3);
+			instrument.keyRelease(4);
 		} else if (function == 124) { // omni mode off
 			// not supported
 		} else if (function == 125) { // omni mode on
 			// the default
 		} else if (function == 126) { // mono mode on
-			synth.keyRelease(1);
-			synth.keyRelease(2);
-			synth.keyRelease(3);
-			synth.keyRelease(4);
+			instrument.keyRelease(1);
+			instrument.keyRelease(2);
+			instrument.keyRelease(3);
+			instrument.keyRelease(4);
 			monoRadio.setChecked(true);
 			polyRadio.setChecked(false);
 			chorusRadio.setChecked(false);
 		} else if (function == 127) { // poly mode on
-			synth.keyRelease(1);
-			synth.keyRelease(2);
-			synth.keyRelease(3);
-			synth.keyRelease(4);
+			instrument.keyRelease(1);
+			instrument.keyRelease(2);
+			instrument.keyRelease(3);
+			instrument.keyRelease(4);
 			polyRadio.setChecked(true);
 			chorusRadio.setChecked(false);
 			monoRadio.setChecked(false);
 		}
-		synth.updateParams();
+		instrument.updateParams();
 	}
 
 	public void onTimingClock() {

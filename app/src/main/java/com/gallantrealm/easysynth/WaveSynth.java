@@ -129,40 +129,12 @@ public class WaveSynth extends AbstractInstrument {
 	private int envelopeSampleRate;
 	private float waveSizeDivSampleRate;
 
-	private MySynth synth;
-	private MySynthMidi midi;
-
-	public WaveSynth(Context context, MySynthMidi.Callbacks midiCallbacks) {
-		synth = MySynth.create(context);
-		midi = MySynthMidi.create(context, synth, midiCallbacks);
+	public WaveSynth(Context context) {
 		sampleRate = AudioTrack.getNativeOutputSampleRate(AudioManager.STREAM_MUSIC); // usually 44100
 		envelopeSampleRate = sampleRate / ENVELOPE_RATE;
 		waveSizeDivSampleRate = (float) WAVE_SIZE / (float)sampleRate;
 
 		System.out.println("EasySynth: sampleRate="+sampleRate);
-	}
-
-	/**
-	 * Starts up the synthesizer
-	 */
-	public void start() {
-		try {
-			System.out.println("EasySynth.start");
-			synth.start();
-			synth.setInstrument(this);
-			midi.start();
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
-	}
-
-	/**
-	 * Stops the synthesizer
-	 */
-	public void stop() {
-		System.out.println("EasySynth.stop");
-		midi.stop();
-		synth.stop();
 	}
 
 	/**
@@ -527,31 +499,6 @@ public class WaveSynth extends AbstractInstrument {
 		amplitude3 = 0;
 		amplitude4 = 0;
 	}
-
-	public void startRecording() {
-		synth.startRecording();
-	}
-
-	public void stopRecording() {
-		synth.stopRecording();
-	}
-
-	public void playbackRecording() {
-		synth.playbackRecording();
-	}
-
-	public void saveRecording(String filename) {
-		try {
-			synth.saveRecording(new FileOutputStream(filename));
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
-	}
-
-	public int getRecordTime() {
-		return synth.getRecordTime();
-	}
-
 
 	/// Loading and saving sound (presets)
 
