@@ -1396,7 +1396,8 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 		} else {
 			sound = (Sound) clientModel.loadObject(soundName + ".wavesynth", true);
 			if (sound != null) {
-				System.out.println("Loaded external file sound " + soundName);
+				applySound(sound);
+				System.out.println("Loaded external file sound " + soundName + ".wavesynth");
 			} else { // try internal (easysynth)
 				sound = (Sound) clientModel.loadObject(soundName + ".easysynth", true);
 				if (sound != null) {
