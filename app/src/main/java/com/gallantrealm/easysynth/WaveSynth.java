@@ -1190,18 +1190,22 @@ public class WaveSynth extends AbstractInstrument {
 
 		// clip
 		if (ampOverdrive > 0 && ampOverdrivePerVoice) {
-			sample1 = (float)Math.pow(sample1, ampOverdrive);
+			for (int od = 0; od < ampOverdrive; od++) {
+				sample1 *= 2.0f;
+				sample2 *= 2.0f;
+				sample3 *= 2.0f;
+				sample4 *= 2.0f;
+			}
 			sample1 = range(sample2, -1.0f, 1.0f);
-			sample2 = (float)Math.pow(sample2, ampOverdrive);
 			sample2 = range(sample2, -1.0f, 1.0f);
-			sample3 = (float)Math.pow(sample3, ampOverdrive);
 			sample3 = range(sample3, -1.0f, 1.0f);
-			sample4 = (float)Math.pow(sample4, ampOverdrive);
 			sample4 = range(sample4, -1.0f, 1.0f);
 		}
 		float sample = sample1 + sample2 + sample3 + sample4;
 		if (ampOverdrive > 0 && !ampOverdrivePerVoice) {
-			sample = (float)Math.pow(sample, ampOverdrive);
+			for (int od = 0; od< ampOverdrive; od++) {
+				sample *= 2.0f;
+			}
 			sample = range(sample, -1.0f, 1.0f);
 		}
 
