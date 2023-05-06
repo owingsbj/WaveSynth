@@ -1,6 +1,7 @@
 package com.gallantrealm.easysynth;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -690,6 +691,8 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 //		} else {
 			buyButton.setVisibility(View.GONE);
 //		}
+		sendButton.setVisibility(View.GONE);
+
 		buyButton.setOnClickListener(this);
 		soundButton.setOnClickListener(this);
 		harmonicsButton.setOnClickListener(this);
@@ -1499,25 +1502,19 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 
 	@SuppressLint("NewApi")
 	public void saveRecording() {
-		if (!clientModel.isFullVersion() && !clientModel.isGoggleDogPass()) {
-			MessageDialog messageDialog = new MessageDialog(this, "Save Disabled", "Buy full version to enable save.", null);
-			messageDialog.show();
-			return;
-		}
+//		if (!clientModel.isFullVersion() && !clientModel.isGoggleDogPass()) {
+//			MessageDialog messageDialog = new MessageDialog(this, "Save Disabled", "Buy full version to enable save.", null);
+//			messageDialog.show();
+//			return;
+//		}
 		if (Build.VERSION.SDK_INT >= 23 && checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
 			requestPermissions(new String[] { Manifest.permission.WRITE_EXTERNAL_STORAGE }, REQUEST_PERMISSION_WRITE_EXTERNAL_STORAGE);
 			return;
 		}
-		File rootDir = new File("/sdcard");
-		if (!rootDir.exists()) {
-			rootDir = new File("/mnt/sdcard");
-			if (!rootDir.exists()) {
-				rootDir = Environment.getExternalStorageDirectory();
-			}
-		}
-		final File easySynthDir = new File(rootDir.getPath() + "/EasySynth");
+		File musicDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC);
+		final File easySynthDir = new File(musicDir.getPath() + "/WaveSynth");
 		if (!easySynthDir.exists()) {
-			easySynthDir.mkdirs();
+			easySynthDir.mkdir();
 		}
 		final InputDialog inputDialog = new InputDialog(this, "Save Recording", "Recording name:", lastRecordName, new String[] { "Save", "Cancel" });
 		inputDialog.setOnDismissListener(new OnDismissListener() {
@@ -1531,44 +1528,40 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 					System.out.println("Saving recording to " + filename);
 
 					File file = new File(filename);
-					try {
-						synth.saveRecording(new FileOutputStream(filename));
-					} catch (IOException e) {
-						throw new RuntimeException(e);
+					if (file.exists()) {
+						final InputDialog confirmDialog = new InputDialog(MainActivity.this, "File Exists", "File already exists with name:", lastRecordName, new String[] { "Overwrite", "Cancel" });
+						confirmDialog.setOnDismissListener(new OnDismissListener() {
+
+							@Override
+							public void onDismiss(DialogInterface dialog) {
+								if (confirmDialog.getButtonPressed() == 0) {
+									finishSavingRecording(file);
+								}
+							}
+						});
+						confirmDialog.show();
+					} else {
+						finishSavingRecording(file);
 					}
-					sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(file)));
-
-					System.out.println("Recording saved.");
-					unsavedRecording = false;
-
-					Toast toast = Toast.makeText(MainActivity.this, "Saved to " + filename, Toast.LENGTH_LONG);
-					toast.show();
-
-					// Intent intent = new Intent(Intent.ACTION_SEND);
-					// intent.setType("audio/wav");
-					// Uri uri = Uri.fromFile(file);
-					// intent.putExtra(Intent.EXTRA_STREAM, uri);
-					// intent.putExtra(Intent.EXTRA_SUBJECT, recordname +
-					// ".wav");
-					// intent.putExtra(Intent.EXTRA_TEXT,
-					// "Sharing a recording with you. I made it LIVE using
-					// EasySynth!");
-					// try {
-					// clientModel.getContext().startActivity(intent);
-					// } catch (Exception e) {
-					// MessageDialog message = new
-					// MessageDialog(MainActivity.this, null, "Recording saved
-					// at " +
-					// filename + ". You will need to use a file manager app to
-					// access the file.", new String[] { "OK"
-					// });
-					// message.show();
-					// }
-
 				}
 			}
 		});
 		inputDialog.show();
+	}
+
+	private void finishSavingRecording(File file) {
+		try {
+			synth.saveRecording(new BufferedOutputStream(new FileOutputStream(file)));
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+		sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(file)));
+
+		System.out.println("Recording saved.");
+		unsavedRecording = false;
+
+		Toast toast = Toast.makeText(MainActivity.this, "Saved to " + file, Toast.LENGTH_LONG);
+		toast.show();
 	}
 
 	boolean applyingASound = false;
