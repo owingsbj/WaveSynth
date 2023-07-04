@@ -269,9 +269,6 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
-		// start new relic monitoring
-		// NewRelic.withApplicationToken("AA3df2239d290a22408ba275086e61834efc7eae94").start(this.getApplication());
-
 		setContentView(R.layout.synth_screen);
 
 		clientModel.loadPreferences(this);
@@ -1834,6 +1831,7 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 		if (isScreenOn) {
 			// synth.start();
 		}
+		getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_FULLSCREEN);
 		soundLoadTime = System.currentTimeMillis();
 	}
 
