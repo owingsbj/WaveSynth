@@ -10,8 +10,8 @@ android {
         applicationId "com.gallantrealm.easysynth"
         minSdk 28
         targetSdk 33
-        versionCode 1003
-        versionName "10.3"
+        versionCode 1004
+        versionName "10.4"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
