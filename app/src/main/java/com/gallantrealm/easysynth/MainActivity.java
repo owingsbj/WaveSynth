@@ -1270,19 +1270,21 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 			// Arrays.sort(files, new Comparator<File>() {
 			//
 			// };
-			for (int i = 0; i < files.length; i++) {
-				String filename = files[i].getName();
-				boolean found = false;
-				for (int j = 0; j < assets.length; j++) {
-					if (filename.equals(assets[j])) {
-						found = true;
+			if (files != null) {
+				for (int i = 0; i < files.length; i++) {
+					String filename = files[i].getName();
+					boolean found = false;
+					for (int j = 0; j < assets.length; j++) {
+						if (filename.equals(assets[j])) {
+							found = true;
+						}
 					}
-				}
-				if (!found) {
-					int synthpos = filename.indexOf(".easysynth");
-					if (synthpos >= 0) {
-						String name = filename.substring(0, synthpos);
-						soundAdapter.add(name);
+					if (!found) {
+						int synthpos = filename.indexOf(".easysynth");
+						if (synthpos >= 0) {
+							String name = filename.substring(0, synthpos);
+							soundAdapter.add(name);
+						}
 					}
 				}
 			}
@@ -1292,19 +1294,21 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 			// Arrays.sort(files, new Comparator<File>() {
 			//
 			// };
-			for (int i = 0; i < files.length; i++) {
-				String filename = files[i].getName();
-				boolean found = false;
-				for (int j = 0; j < assets.length; j++) {
-					if (filename.equals(assets[j])) {
-						found = true;
+			if (files != null) {
+				for (int i = 0; i < files.length; i++) {
+					String filename = files[i].getName();
+					boolean found = false;
+					for (int j = 0; j < assets.length; j++) {
+						if (filename.equals(assets[j])) {
+							found = true;
+						}
 					}
-				}
-				if (!found) {
-					int synthpos = filename.indexOf(".wavesynth");
-					if (synthpos >= 0) {
-						String name = filename.substring(0, synthpos);
-						soundAdapter.add(name);
+					if (!found) {
+						int synthpos = filename.indexOf(".wavesynth");
+						if (synthpos >= 0) {
+							String name = filename.substring(0, synthpos);
+							soundAdapter.add(name);
+						}
 					}
 				}
 			}
