@@ -7,6 +7,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 
 import com.gallantrealm.android.ContentUriUtil;
 import com.gallantrealm.easysynth.theme.AuraTheme;
@@ -27,6 +28,8 @@ import com.gallantrealm.mysynth.MySynthMidi;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnDismissListener;
@@ -42,6 +45,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.PowerManager;
 import android.os.SystemClock;
+import android.provider.MediaStore;
 import android.util.DisplayMetrics;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -1529,11 +1533,6 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 			requestPermissions(new String[] { Manifest.permission.WRITE_EXTERNAL_STORAGE }, REQUEST_PERMISSION_WRITE_EXTERNAL_STORAGE);
 			return;
 		}
-		File musicDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC);
-		final File easySynthDir = new File(musicDir.getPath() + "/WaveSynth");
-		if (!easySynthDir.exists()) {
-			easySynthDir.mkdir();
-		}
 		final InputDialog inputDialog = new InputDialog(this, "Save Recording", "Recording name:", lastRecordName, new String[] { "Save", "Cancel" });
 		inputDialog.setOnDismissListener(new OnDismissListener() {
 
@@ -1542,24 +1541,61 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 				if (inputDialog.getButtonPressed() == 0) {
 					final String recordname = inputDialog.getValue();
 					lastRecordName = recordname;
-					final String filename = easySynthDir.getPath() + "/" + recordname + ".wav";
-					System.out.println("Saving recording to " + filename);
 
-					File file = new File(filename);
-					if (file.exists()) {
-						final InputDialog confirmDialog = new InputDialog(MainActivity.this, "File Exists", "File already exists with name:", lastRecordName, new String[] { "Overwrite", "Cancel" });
-						confirmDialog.setOnDismissListener(new OnDismissListener() {
-
-							@Override
-							public void onDismiss(DialogInterface dialog) {
-								if (confirmDialog.getButtonPressed() == 0) {
-									finishSavingRecording(file);
-								}
+					if (Build.VERSION.SDK_INT < 29) {
+						File musicDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC);
+						if (!musicDir.exists()) {
+							System.out.println("making Music directory");
+							boolean made = musicDir.mkdir();
+							if (!made) {
+								System.out.println("Music directory could not be made!!");
 							}
-						});
-						confirmDialog.show();
-					} else {
-						finishSavingRecording(file);
+						}
+						final File easySynthDir = new File(musicDir, "WaveSynth");
+						if (!easySynthDir.exists()) {
+							System.out.println("making Music/WaveSynth");
+							boolean made = easySynthDir.mkdir();
+							if (!made) {
+								System.out.println("Music/WaveSynth could not be made!!");
+							}
+						}
+
+						final String filename = easySynthDir.getPath() + "/" + recordname + ".wav";
+						System.out.println("Saving recording to " + filename);
+
+						File file = new File(filename);
+						if (file.exists()) {
+							final InputDialog confirmDialog = new InputDialog(MainActivity.this, "File Exists", "File already exists with name:", lastRecordName, new String[]{"Overwrite", "Cancel"});
+							confirmDialog.setOnDismissListener(new OnDismissListener() {
+
+								@Override
+								public void onDismiss(DialogInterface dialog) {
+									if (confirmDialog.getButtonPressed() == 0) {
+										finishSavingRecording(file);
+									}
+								}
+							});
+							confirmDialog.show();
+						} else {
+							finishSavingRecording(file);
+						}
+					} else { // sdk >= 29
+						ContentResolver contentResolver = MainActivity.this.getContentResolver();
+						ContentValues contentValues = new ContentValues();
+						contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, recordname + ".wav");
+						contentValues.put(MediaStore.MediaColumns.MIME_TYPE, "audio/wav");
+						contentValues.put(MediaStore.MediaColumns.RELATIVE_PATH, "Music/WaveSynth");
+						Uri uri = contentResolver.insert(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, contentValues);
+						try {
+							OutputStream outputStream = contentResolver.openOutputStream(uri);
+							synth.saveRecording(new BufferedOutputStream(outputStream));
+							System.out.println("Recording saved.");
+							unsavedRecording = false;
+							Toast toast = Toast.makeText(MainActivity.this, "Saved to Music/WaveSynth/" + recordname + ".wav", Toast.LENGTH_LONG);
+							toast.show();
+						} catch (IOException e) {
+							throw new RuntimeException(e);
+						}
 					}
 				}
 			}
