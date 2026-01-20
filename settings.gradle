@@ -14,5 +14,3 @@ dependencyResolutionManagement {
 }
 rootProject.name = "WaveSynth"
 include ':app'
-include ':mySynth'
-include ':myAndroid'

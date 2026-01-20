@@ -10,8 +10,8 @@ android {
         applicationId "com.gallantrealm.easysynth"
         minSdk 28
         targetSdk 35
-        versionCode 1006
-        versionName "10.6"
+        versionCode 1007
+        versionName "10.7"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -39,8 +39,8 @@ dependencies {
     implementation 'androidx.navigation:navigation-fragment:2.7.7'
     implementation 'androidx.navigation:navigation-ui:2.7.7'
     implementation 'com.google.code.gson:gson:2.10.1'
-    implementation project(path: ':myAndroid')
-    implementation project(path: ':mySynth')
+    implementation files('../../MySynth/app/build/outputs/aar/app-release.aar')
+    implementation files('../../MyAndroid/app/build/outputs/aar/app-release.aar')
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
