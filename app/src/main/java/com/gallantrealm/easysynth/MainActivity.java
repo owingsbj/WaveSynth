@@ -51,6 +51,7 @@ import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnTouchListener;
+import android.view.WindowInsets;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -947,6 +948,29 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 				}
 			}
 		});
+
+		// In Desktop mode, a maximize of the window will change the padding.  The
+		// following listener adjusts the padding to compensate
+		View rootLayout = findViewById(R.id.mainLayout);
+		rootLayout.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
+			@Override
+			public WindowInsets onApplyWindowInsets(View v, WindowInsets insets) {
+				// 'systemBars' includes the status bar and the desktop caption bar
+				android.graphics.Insets bars = insets.getInsets(
+						WindowInsets.Type.systemBars()
+				);
+
+				// Apply the top inset as padding so your app content
+				// shifts down below the desktop title bar
+				v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+
+				// Return 'consume' so the insets aren't passed down to child views
+				// which might cause double-padding
+				return WindowInsets.CONSUMED;
+			}
+		});
+
+
 	}
 
 	@Override
