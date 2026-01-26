@@ -2178,8 +2178,8 @@ public class MainActivity extends Activity implements OnTouchListener, OnSeekBar
 			} else if (isPointInsideView(x, y, key32)) {
 				note = 31;
 			} else {
-				// fudge x a bit and try again
-				x = x - 4;
+				// couldn't find a key.  Leave to avoid infinite loop
+				return;
 			}
 		}
 
